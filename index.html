@@ -933,6 +933,26 @@ footer { color: var(--dim); font-size: 12px; text-align: center; padding: 30px 0
   }
   function wwShortId() { return hexId(6) + '-' + hexId(16); }
 
+  // Defaults for the per-server fields the WWPlayer mobile app expects in a
+  // schemaVersion 2 backup. A non-mobile source (Hills / Capy / Rodel ...) has
+  // no such fields, so we seed them with the values a phone export actually
+  // carries; otherwise the importer rejects the file as "content invalid".
+  function mobileServerDefaults() {
+    return {
+      aggregateEnabled: true,
+      aggregateSearchEnabled: true,
+      aggregateContinueWatchingEnabled: true,
+      aggregateFavoritesEnabled: true,
+      aggregatePlaybackSourcesEnabled: true,
+      preloadNextEpisodeEnabled: true,
+      strmEnabled: false,
+      keepAliveDays: 0,
+      keepAliveStartedAtMs: 0,
+      homePresentation: null,
+      cropIconToCircle: false
+    };
+  }
+
   function buildWwmobile(servers) {
     var backup = null;
     servers.forEach(function (s) {
@@ -940,7 +960,10 @@ footer { color: var(--dim); font-size: 12px; text-align: center; padding: 30px 0
     });
     var doc = backup ? JSON.parse(JSON.stringify(backup)) : wwMobileSkeleton();
     doc.servers = servers.map(function (s) {
-      var o = (s.raw && s.raw.wwmobile) ? JSON.parse(JSON.stringify(s.raw.wwmobile)) : baseRaw(s, 'wwmobile');
+      // Seed with the full mobile server schema (defaults), then overlay any
+      // fields the source already carried (a native phone backup keeps its own
+      // values). This guarantees every required field exists with the right type.
+      var o = Object.assign({}, mobileServerDefaults(), baseRaw(s, 'wwmobile'));
       // The mobile schemaVersion 2 backup does NOT carry credential fields at
       // the server level (only userId / userName are part of its model). Writing
       // password / accessToken makes the app reject the import as "sensitive

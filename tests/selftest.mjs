@@ -157,6 +157,10 @@ assert.equal(B.parseQuickText('名称 | https://x.example.com | u | p').length, 
   assert.equal(doc.credentialsIncluded, false, 'wwmobile credentialsIncluded must be false');
   assert.ok(!doc.servers.some(s => 'password' in s || 'accessToken' in s), 'wwmobile must not carry password/accessToken');
   assert.equal(doc.servers[0].userId, 'id1', 'wwmobile keeps identity userId');
+  // Every server must carry the full mobile schema, otherwise the phone app
+  // rejects the import as "content invalid".
+  const reqFields = ['aggregateEnabled', 'aggregateSearchEnabled', 'aggregateContinueWatchingEnabled', 'aggregateFavoritesEnabled', 'aggregatePlaybackSourcesEnabled', 'preloadNextEpisodeEnabled', 'strmEnabled', 'keepAliveDays', 'keepAliveStartedAtMs', 'homePresentation', 'cropIconToCircle', 'serverId', 'displayName', 'lines', 'activeLineId', 'remoteServerId', 'remark', 'serverType', 'requiresAuthentication', 'userId', 'userName'];
+  assert.ok(reqFields.every(k => k in doc.servers[0]), 'wwmobile server must have full mobile schema fields');
 }
 
 console.log(`OK: ${checked} formats round-tripped, ${B.FORMATS.length}x${B.FORMATS.length + 1} cross-format builds, CSV / quick text / official-style Hills v2+v3 / mobile WWPlayer passed.`);
