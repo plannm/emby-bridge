@@ -21,7 +21,8 @@
 | Yamby / Tsukimi CommonConfig | `.json` | 读 / 写 |
 | CapyPlayer | `.json` | 读 / 写 |
 | LinPlayer | `.lpbak` | 读 / 写 |
-| WWPlayer | `.wwpcfg` | 读 / 写 |
+| WWPlayer 电脑端 | `.wwpcfg` | 读 / 写（V1 便携配置） |
+| WWPlayer 手机端 | `.json` | 读 / 写（schemaVersion 2 完整备份） |
 | AI Player | `.json` | 读 / 写 |
 | 通用中间格式 / CSV | `.json` / `.csv` | 读 / 写（明文，便于长期保存与批量编辑） |
 

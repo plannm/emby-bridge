@@ -113,4 +113,32 @@ assert.equal(B.parseQuickText('名称 | https://x.example.com | u | p').length, 
   assert.equal(got[0].url, 'https://v3.example.com', 'hills v3 url');
 }
 
-console.log(`OK: ${checked} formats round-tripped, 7x8 cross-format builds, CSV / quick text / official-style Hills v2+v3 passed.`);
+// Regression: detect a mobile WWPlayer full backup and preserve its document.
+{
+  const mobile = {
+    schemaVersion: 2, exportedAtMs: 1700000000000, credentialsIncluded: false,
+    preferences: { themeMode: 'System' },
+    servers: [{
+      serverId: 'abc123-0123456789abcdef', displayName: '虚构手机端',
+      lines: [{ lineId: 'line1-0123456789abcdef', serverUrl: 'https://mobile.example.com', name: '默认', source: '' }],
+      activeLineId: 'line1-0123456789abcdef', remoteServerId: '0123456789abcdef0123456789abcdef',
+      remark: '', serverType: 'emby', requiresAuthentication: true,
+      userId: 'uid-mobile', userName: 'demo'
+    }],
+    collections: { watchlist: [], playlists: [] },
+    playbackHistory: { resumeRecords: [], dismissals: [], continueRecords: [], homeRecords: [] },
+    contentSources: [], discoveryHomes: { schemaVersion: 1, activeId: '', pages: [], primaryId: '', enabled: false },
+    modules: [], nexusState: { imports: [], bindings: [], homePlaylists: [], extension: {} }
+  };
+  const text = JSON.stringify(mobile);
+  assert.equal(B.detect(text, 'wwplayer-backup.json'), 'wwmobile', 'detect mobile backup');
+  const got = (await B.parse(text, 'wwmobile')).servers;
+  assert.equal(got.length, 1, 'mobile server count');
+  assert.equal(got[0].url, 'https://mobile.example.com', 'mobile url');
+  assert.equal(got[0].username, 'demo', 'mobile username');
+  const outDoc = JSON.parse((await B.build(got, 'wwmobile')).text);
+  assert.equal(outDoc.preferences.themeMode, 'System', 'mobile preferences preserved');
+  assert.equal(outDoc.servers[0].displayName, '虚构手机端', 'mobile server rebuilt');
+}
+
+console.log(`OK: ${checked} formats round-tripped, ${B.FORMATS.length}x${B.FORMATS.length + 1} cross-format builds, CSV / quick text / official-style Hills v2+v3 / mobile WWPlayer passed.`);

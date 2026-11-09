@@ -111,14 +111,15 @@
     afusekt: { label: 'AfuseKt', ext: 'json', note: '明文 JSON，直接可读' },
     yamby: { label: 'Yamby / Tsukimi', ext: 'json', note: '通用配置格式，AES-256-CBC' },
     linplayer: { label: 'LinPlayer', ext: 'lpbak', note: 'AES-256-CBC，密钥随文件附带' },
-    wwplayer: { label: 'WWPlayer', ext: 'wwpcfg', note: 'V1 可逆混淆，非强加密' },
+    wwplayer: { label: 'WWPlayer 电脑端', ext: 'wwpcfg', note: 'V1 便携配置，可逆混淆' },
+    wwmobile: { label: 'WWPlayer 手机端', ext: 'json', note: 'schemaVersion 2 完整备份（明文）' },
     capyplayer: { label: 'CapyPlayer', ext: 'json', note: 'PBKDF2 + AES-256-GCM' },
     hills: { label: 'Hills', ext: 'json', note: 'AES-256-CBC' },
     aiplayer: { label: 'AI Player', ext: 'json', note: 'V1 加密配置' },
     bridge: { label: '通用中间格式', ext: 'json', note: '明文，可跨设备长期保存 / 手工编辑' },
     csv: { label: 'CSV 表格', ext: 'csv', note: '明文，便于批量编辑（不含全部字段）' }
   };
-  var FORMATS = ['afusekt', 'yamby', 'linplayer', 'wwplayer', 'capyplayer', 'hills', 'aiplayer'];
+  var FORMATS = ['afusekt', 'yamby', 'linplayer', 'wwplayer', 'wwmobile', 'capyplayer', 'hills', 'aiplayer'];
 
   /* ---------------------------- unified model ----------------------------- */
 
@@ -254,6 +255,8 @@
     var fn = (filename || '').toLowerCase();
     if (Array.isArray(o) && o.length && ('originalAddress' in o[0] || 'nowAddress' in o[0])) return 'afusekt';
     if (o && o.magic === WW_MAGIC) return 'wwplayer';
+    // Mobile WWPlayer full backup: plain JSON, schemaVersion 2.
+    if (o && Number(o.schemaVersion) >= 2 && Array.isArray(o.servers) && (o.preferences || o.playbackHistory)) return 'wwmobile';
     if (o && o.encrypted_data) return 'capyplayer';
     if (o && o.format === 'emby-bridge') return 'bridge';
     if (o && Array.isArray(o.configs) && o._key !== undefined) return fn.endsWith('.lpbak') ? 'linplayer' : 'yamby';
@@ -334,6 +337,26 @@
           }));
           servers[servers.length - 1].raw.wwplayer = w;
         });
+        break;
+
+      case 'wwmobile':
+        (o.servers || []).forEach(function (m, idx) {
+          if (!m || typeof m !== 'object') return;
+          var mlines = linesFromRaw(m.lines, function (x) {
+            return { name: x.name, url: x.serverUrl, active: x.lineId === m.activeLineId };
+          });
+          var main = mlines.find(function (l) { return l.active; }) || mlines[0] || {};
+          servers.push(emptyServer({
+            id: m.serverId, name: m.displayName || '', serverName: m.displayName || '',
+            url: main.url || m.serverUrl || '', username: m.userName || '',
+            password: m.password || '', userId: m.userId || '', accessToken: m.accessToken || '',
+            type: m.serverType || 'emby', remark: m.remark || '', sortOrder: idx, lines: mlines
+          }));
+          servers[servers.length - 1].raw.wwmobile = m;
+        });
+        // Keep the full document: mobile backups carry preferences, playback
+        // history, collections etc. Preserve them on a same-format round-trip.
+        if (servers.length) servers[0].raw._wwMobileBackup = o;
         break;
 
       case 'capyplayer':
@@ -512,6 +535,57 @@
     return { magic: WW_MAGIC, nonce: nonce, payload: payload };
   }
 
+  function wwMobileSkeleton() {
+    return {
+      schemaVersion: 2, exportedAtMs: nowMs(), credentialsIncluded: false,
+      preferences: {}, servers: [],
+      collections: { watchlist: [], playlists: [] },
+      playbackHistory: { resumeRecords: [], dismissals: [], continueRecords: [], homeRecords: [] },
+      contentSources: [],
+      discoveryHomes: { schemaVersion: 1, activeId: '', pages: [], primaryId: '', enabled: false },
+      modules: [],
+      nexusState: { imports: [], bindings: [], homePlaylists: [], extension: {} }
+    };
+  }
+  function wwShortId() { return hexId(6) + '-' + hexId(16); }
+
+  function buildWwmobile(servers) {
+    var backup = null;
+    servers.forEach(function (s) {
+      if (!backup && s.raw && s.raw._wwMobileBackup) backup = s.raw._wwMobileBackup;
+    });
+    var doc = backup ? JSON.parse(JSON.stringify(backup)) : wwMobileSkeleton();
+    doc.servers = servers.map(function (s) {
+      var o = baseRaw(s, 'wwmobile');
+      var oldLines = Array.isArray(o.lines) ? o.lines : [];
+      var lines = s.lines.filter(function (l) { return l.url; }).map(function (l, j) {
+        return {
+          lineId: (oldLines[j] && oldLines[j].lineId) || wwShortId(),
+          serverUrl: l.url, name: l.name || '',
+          source: (oldLines[j] && oldLines[j].source) || ''
+        };
+      });
+      if (!lines.length) lines = [{ lineId: wwShortId(), serverUrl: s.url, name: '默认', source: '' }];
+      var idx = Math.min(Math.max(s.activeLine || 0, 0), lines.length - 1);
+      Object.assign(o, {
+        serverId: o.serverId || wwShortId(), displayName: s.name || '',
+        lines: lines, activeLineId: lines[idx].lineId,
+        remoteServerId: o.remoteServerId || hexId(32),
+        remark: s.remark || '', serverType: s.type || 'emby',
+        requiresAuthentication: true, userId: s.userId || '', userName: s.username || ''
+      });
+      // Credential field names follow the same app's data model. If a future
+      // version renames them, the file still imports (login again may be needed).
+      if (s.password) o.password = s.password;
+      if (s.accessToken) o.accessToken = s.accessToken;
+      return o;
+    });
+    doc.schemaVersion = 2;
+    doc.exportedAtMs = nowMs();
+    doc.credentialsIncluded = servers.some(function (s) { return !!(s.password || s.accessToken); });
+    return doc;
+  }
+
   async function buildCapyplayer(servers) {
     var backup = null;
     servers.forEach(function (s) {
@@ -630,6 +704,7 @@
       case 'yamby': obj = await buildYamby(list); break;
       case 'linplayer': obj = await buildLinplayer(list); break;
       case 'wwplayer': obj = buildWwplayer(list); break;
+      case 'wwmobile': obj = buildWwmobile(list); break;
       case 'capyplayer': obj = await buildCapyplayer(list); break;
       case 'hills': obj = await buildHills(list); break;
       case 'aiplayer': obj = await buildAiplayer(list); break;

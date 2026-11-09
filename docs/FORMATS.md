@@ -25,7 +25,8 @@
 | AfuseKt | `nowAddress` / `originalAddress` | `account` / `password` | `lines[].address`（`isNow` 标记当前） |
 | Yamby | `url` | `authorization.{user_name,password,user_id,access_token}` | `lines[].url` |
 | LinPlayer | `url` | `username` + `linplayer.password` / `user_id` / `access_token` | `linplayer.lines[].url` |
-| WWPlayer | `servers[].lines[].url`（顶层另有首台服务器的 `embyServerUrl`） | `username` / `password` / `userId` / `accessToken` | `servers[].lines[]`，`activeLineId` 指向当前线路 |
+| WWPlayer 电脑端 | `servers[].lines[].url`（顶层另有首台服务器的 `embyServerUrl`） | `username` / `password` / `userId` / `accessToken` | `servers[].lines[]`，`activeLineId` 指向当前线路 |
+| WWPlayer 手机端 | `servers[].lines[].serverUrl`（`activeLineId` 指向当前线路） | `userName` / `password` / `userId` / `accessToken` | `servers[].lines[]`（`lineId` / `serverUrl` / `name` / `source`） |
 | CapyPlayer | `host` + `port` + `path` + `https` | `username` / `password` / `token` / `user_id` | `backup_routes`（JSON 字符串） |
 | Hills | `serverUrl` | `username` / `password` / `authenticateJson`（`User.Id` + `AccessToken`） | `serverRoutingList[]` |
 | AI Player | `preferredLineUrl` / `lines[].url` | `username` / `encryptedPassword` / `lastKnownUserId` / `encryptedToken` | `lines[]`，`isMain` 标记主线路 |
@@ -37,5 +38,6 @@
 - **Hills 不同来源的备份**可能使用不同的 CBC IV 尾部（前 8 字节相同），因此用同一密钥解密后第一块 16 字节是损坏的。AES-CBC 只有第一块依赖 IV，后续块完好，解析器会重建固定的 JSON 前缀再解析，服务器及线路/凭据均可完整恢复。官方文件多出的 `mpvConf`、`serverVersion`、`deviceIdHash` 等字段在同格式往返时也会保留。
 - **Hills v3**（`version: 3`）的 envelope 多了 `serversData`、`settings`、`iconPacks`、`enableImpeller` 等字段，其中 `settings` / `iconPacks` / `serversData` 是独立的加密 base64 段。`serversData` 解开后是 `{"version":1,"servers":[...]}`（字段为 `protocol` / `displayName` / `preferencesJson` 等，不含密码与 Token），与 `data` 段是同一批服务器的两种表示，实测没有额外服务器。因此解析统一读取 `data` 段，格式识别按 `version >= 2` 加 `iconPacks`/`serversData` 特征判断，并保留 `HillsBackup-*` 文件名兜底。**导出仍生成 v2 结构**，不重建 v3 的其它加密段。
 - **WWPlayer V1** 是可逆混淆而非强加密（其官方文档亦如此说明），`.wwpcfg` 应视为凭据文件。
+- **WWPlayer 手机端**使用明文 `schemaVersion: 2` 完整备份（`preferences` / `servers` / `playbackHistory` / `collections` / `discoveryHomes` / `nexusState` 等），与电脑端 `.wwpcfg` 便携配置是完全不同的两套格式，互不通用。同格式往返会保留整个文档的其它字段；从其它格式转来时生成一份最小的完整骨架。`password` / `accessToken` 字段名按同一 App 的数据模型推测，若目标版本不同可能需要在手机端重新登录。
 - **CapyPlayer 新版**（`database_version: 22`，如 iPhone 官方导出）的 `media_server_resources` 行里没有 `token` 字段（只有 `user_id`），且内层多了 `preference_keys` / `preference_prefixes` / `badge_packs` / `watch_stats_*` 等表。同格式往返会把整个内层文档和 `app_version` / `database_version` / `device_name` 一起保留；跨格式转换则只保留服务器信息。
 - 部分格式在原始对象里带有播放器特有的开关（代理、隐藏媒体库、轮播等）。同格式往返时会保留这些字段；跨格式转换只迁移上表列出的通用字段。
