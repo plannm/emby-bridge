@@ -138,11 +138,14 @@
     return r;
   }
   async function handleFiles(files) {
+    // FileList / DataTransfer.files are live objects. The file input is reset
+    // right after selection, so take a snapshot before any await.
+    var list = Array.prototype.slice.call(files || []);
     var added = 0, merged = 0, errors = [];
-    for (var i = 0; i < files.length; i++) {
+    for (var i = 0; i < list.length; i++) {
       try {
-        var text = await files[i].text();
-        var r = await importText(text, files[i].name);
+        var text = await list[i].text();
+        var r = await importText(text, list[i].name);
         added += r.added; merged += r.merged;
       } catch (e) { errors.push(e.message); }
     }
@@ -171,10 +174,17 @@
     var drop = $('#drop'), input = $('#fileInput');
     drop.addEventListener('click', function (e) { if (e.target.tagName !== 'BUTTON') input.click(); });
     $('#pickBtn').addEventListener('click', function (e) { e.stopPropagation(); input.click(); });
-    input.addEventListener('change', function () { if (input.files.length) handleFiles(input.files); input.value = ''; });
+    input.addEventListener('change', function () {
+      var snapshot = Array.prototype.slice.call(input.files || []);
+      input.value = '';
+      if (snapshot.length) handleFiles(snapshot);
+    });
     ['dragenter', 'dragover'].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add('hover'); }); });
     ['dragleave', 'drop'].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove('hover'); }); });
-    drop.addEventListener('drop', function (e) { if (e.dataTransfer.files.length) handleFiles(e.dataTransfer.files); });
+    drop.addEventListener('drop', function (e) {
+      var snapshot = Array.prototype.slice.call(e.dataTransfer.files || []);
+      if (snapshot.length) handleFiles(snapshot);
+    });
 
     $('#search').addEventListener('input', function (e) { state.filter = e.target.value; render(); });
     $('#addBtn').addEventListener('click', function () {
