@@ -164,3 +164,37 @@ assert.equal(B.parseQuickText('名称 | https://x.example.com | u | p').length, 
 }
 
 console.log(`OK: ${checked} formats round-tripped, ${B.FORMATS.length}x${B.FORMATS.length + 1} cross-format builds, CSV / quick text / official-style Hills v2+v3 / mobile WWPlayer passed.`);
+
+
+// Regressions: selected LinPlayer route and conservative merge identity.
+{
+  const source = B.normalize([{ name: 'Routes', url: 'https://demo.example/main', username: 'Demo', password: 'p',
+    lines: [{ name: 'Main', url: 'https://demo.example/main', active: false }, { name: 'Backup', url: 'https://demo.example/backup', active: true }] }]);
+  const back = (await B.parse((await B.build(source, 'linplayer')).text, 'linplayer')).servers;
+  assert.equal(back[0].activeLine, 1, 'LinPlayer preserves selected backup route');
+  const item = (url, username = 'Demo', password = 'p') => B.emptyServer({url, username, password});
+  for (const pair of [
+    [item('https://demo.example/A'), item('https://demo.example/a')],
+    [item('https://demo.example'), item('https://demo.example', 'demo')],
+    [item('https://demo.example'), item('https://demo.example', 'Demo', 'different')],
+    [item('https://demo.example/?key=A'), item('https://demo.example/?key=a')]
+  ]) {
+    assert.equal(B.dedupe(pair).length, 2, 'dedupe preserves distinct configurations');
+    assert.equal(B.mergeServerLists([pair[0]], [pair[1]]).servers.length, 2, 'import preserves distinct configurations');
+  }
+  const a = item('HTTPS://DEMO.EXAMPLE/A'), b = item('https://demo.example/A');
+  a.accessToken = ''; b.accessToken = 'fictional-token';
+  b.lines = [{name:'backup',url:'https://backup.example',active:true}];
+  const merged = B.mergeServerLists([a], [b]);
+  assert.equal(merged.servers.length, 1, 'host and scheme case normalize');
+  assert.equal(merged.servers[0].accessToken, 'fictional-token', 'missing credentials filled');
+  assert.equal(merged.servers[0].lines.length, 1, 'extra routes preserved');
+  for (const key of ['userId', 'accessToken']) {
+    const first = item('https://demo.example'), second = item('https://demo.example');
+    first[key] = 'first'; second[key] = 'second';
+    assert.equal(B.dedupe([first, second]).length, 2, 'conflicting identity/token preserved');
+  }
+  const ambiguous = B.mergeServerLists([item('https://demo.example', 'Demo', 'one'), item('https://demo.example', 'Demo', 'two')], [item('https://demo.example', 'Demo', '')]);
+  assert.equal(ambiguous.servers.length, 3, 'ambiguous credential-less import stays separate');
+}
+console.log('OK: LinPlayer selected route and safe import/deduplication regressions passed.');

@@ -24,24 +24,11 @@
   }
 
   /* ------------------------------ merging ------------------------------ */
-  function fill(a, b) {
-    ['name', 'serverName', 'url', 'username', 'password', 'userId', 'accessToken', 'icon', 'remark'].forEach(function (k) {
-      if (!a[k] && b[k]) a[k] = b[k];
-    });
-    if ((b.lines || []).length > (a.lines || []).length) a.lines = b.lines;
-    Object.keys(b.raw || {}).forEach(function (f) { if (!a.raw[f]) a.raw[f] = b.raw[f]; });
-  }
   function mergeServers(incoming) {
-    var index = {};
-    state.servers.forEach(function (s) { index[(s.url || '').toLowerCase() + '|' + (s.username || '').toLowerCase()] = s; });
-    var added = 0, merged = 0;
-    incoming.forEach(function (s) {
-      var key = (s.url || '').toLowerCase() + '|' + (s.username || '').toLowerCase();
-      if (index[key]) { fill(index[key], s); merged++; }
-      else { s._selected = true; s._open = false; state.servers.push(s); index[key] = s; added++; }
-    });
-    state.servers = B.normalize(state.servers);
-    return { added: added, merged: merged };
+    incoming.forEach(function (s) { s._selected = true; s._open = false; });
+    var result = B.mergeServerLists(state.servers, incoming);
+    state.servers = B.normalize(result.servers);
+    return { added: result.added, merged: result.merged };
   }
 
   /* ------------------------------- render ------------------------------- */
@@ -271,3 +258,4 @@
 
   document.addEventListener('DOMContentLoaded', function () { bind(); render(); });
 })();
+

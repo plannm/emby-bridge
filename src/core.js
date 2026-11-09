@@ -165,15 +165,43 @@
     });
   }
   function activeUrl(s) { return (s.lines[s.activeLine] && s.lines[s.activeLine].url) || s.url; }
-  function dedupe(servers) {
-    var seen = {}, out = [];
-    servers.forEach(function (s) {
-      var k = (s.url || '').toLowerCase() + '|' + (s.username || '').toLowerCase();
-      if (seen[k]) return;
-      seen[k] = 1; out.push(s);
+  function serverIdentity(s) {
+    var address = String(s.url || '').trim();
+    // Only scheme and host are case-insensitive. Preserve path/query/user case.
+    address = address.replace(/^(https?):\/\/([^/\?#]+)/i, function (_, scheme, authority) {
+      return scheme.toLowerCase() + '://' + authority.toLowerCase();
     });
-    return out;
+    return JSON.stringify([s.type || 'emby', address, String(s.username || '')]);
   }
+  function credentialsCompatible(a, b) {
+    return ['password', 'userId', 'accessToken'].every(function (k) {
+      return !a[k] || !b[k] || a[k] === b[k];
+    });
+  }
+  function mergeServerLists(existing, incoming) {
+    var out = existing.slice(), added = 0, merged = 0;
+    incoming.forEach(function (s) {
+      var identity = serverIdentity(s);
+      var candidates = out.filter(function (a) {
+        return serverIdentity(a) === identity && credentialsCompatible(a, s);
+      });
+      // Ambiguous matches and conflicting credentials stay as separate entries.
+      if (candidates.length !== 1) { out.push(s); added++; return; }
+      var a = candidates[0];
+      ['name', 'serverName', 'username', 'password', 'userId', 'accessToken', 'icon', 'remark'].forEach(function (k) {
+        if (!a[k] && s[k]) a[k] = s[k];
+      });
+      a.lines = a.lines || [];
+      (s.lines || []).forEach(function (l) {
+        if (!a.lines.some(function (old) { return old.url === l.url; })) a.lines.push(Object.assign({}, l, { active: false }));
+      });
+      a.raw = a.raw || {};
+      Object.keys(s.raw || {}).forEach(function (k) { if (!a.raw[k]) a.raw[k] = s.raw[k]; });
+      merged++;
+    });
+    return { servers: out, added: added, merged: merged };
+  }
+  function dedupe(servers) { return mergeServerLists([], servers).servers; }
   function splitUrl(u) {
     var o = { https: 0, host: '', port: 0, path: null };
     try {
@@ -313,7 +341,7 @@
             name: ext.name || it.name, url: it.url, username: it.username,
             password: ext.password, userId: it.user_id, accessToken: it.access_token,
             icon: ext.icon_url, type: it.type || 'emby', remark: ext.remark || '',
-            lines: linesFromRaw(ext.lines, function (x) { return { name: x.name, url: x.url }; })
+            lines: linesFromRaw(ext.lines, function (x) { return { name: x.name, url: x.url, active: x === ext.lines[Number.isInteger(ext.active_line) ? ext.active_line : 0] }; })
           }));
           servers[servers.length - 1].raw.linplayer = it;
         }
@@ -1343,8 +1371,9 @@
   return {
     META: META, FORMATS: FORMATS,
     detect: detect, parse: parse, build: build,
-    normalize: normalize, dedupe: dedupe, emptyServer: emptyServer,
+    normalize: normalize, dedupe: dedupe, mergeServerLists: mergeServerLists, emptyServer: emptyServer,
     toCsv: toCsv, parseCsv: parseCsv, parseQuickText: parseQuickText,
     _internal: { cbcEncrypt: cbcEncrypt, cbcDecrypt: cbcDecrypt, gcmEncrypt: gcmEncrypt, gcmDecrypt: gcmDecrypt, pbkdf2: pbkdf2, sha256: sha256, bytesToB64: bytesToB64, b64ToBytes: b64ToBytes }
   };
 });
+
