@@ -343,7 +343,8 @@ footer { color: var(--dim); font-size: 12px; text-align: center; padding: 30px 0
         ⑤ <b>WWPlayer V1</b> 是可逆混淆，官方也提示 <code>.wwpcfg</code> 应视为凭据文件。<br>
         ⑥ 跨格式转换只迁移名称 / 地址 / 账号 / 密码 / Token / 线路等通用字段，各播放器特有的开关与设置不保证保留。<br>
         ⑦ <b>Hills v3</b>（<code>version: 3</code>，带 <code>serversData</code> / <code>settings</code> / <code>iconPacks</code> 等加密段）现在可以导入，读取的是其中的 <code>data</code> 段；但导出回 Hills 仍生成 v2 结构，新版 App 是否接受、v3 的其它设置能否保留，都<b>没有实测过</b>。建议把 v3 转成其它格式使用，或直接用原生播放器自带的导出功能生成 Hills 备份。<br>
-        ⑧ 目前只在少数真实备份上验证过，样本以外的组合没有覆盖。出问题请保留原始文件，并尽量附上可脱敏的样本反馈。
+        ⑧ <b>Noctra</b> 的 <code>.noctrabackup</code> 是带密码加密的自定义二进制格式（文件头 <code>NOCTRABK</code>，内容整体高熵、没有明文服务器信息），<b>目前不支持</b>。导出时设置的密码就是解密密钥，不知道密码无法转换；即使知道密码，也还需要逆向它的密钥派生/加密结构。建议在 Noctra 里查看服务器信息后，用「批量粘贴 / CSV」录入本工具。<br>
+        ⑨ 目前只在少数真实备份上验证过，样本以外的组合没有覆盖。出问题请保留原始文件，并尽量附上可脱敏的样本反馈。
       </p>
     </details>
     <details class="faq">
