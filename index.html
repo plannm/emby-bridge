@@ -317,7 +317,7 @@ footer { color: var(--dim); font-size: 12px; text-align: center; padding: 30px 0
       <button class="fmt" data-export="yamby"><div class="t">Yamby / Tsukimi <span class="ext">.json</span></div><div class="d">通用 CommonConfig 加密格式</div></button>
       <button class="fmt" data-export="linplayer"><div class="t">LinPlayer <span class="ext">.lpbak</span></div><div class="d">密钥随文件附带，兼容性好</div></button>
       <button class="fmt" data-export="wwplayer"><div class="t">WWPlayer 电脑端 <span class="ext">.wwpcfg</span></div><div class="d">V1 便携配置，供电脑客户端导入</div></button>
-      <button class="fmt" data-export="wwmobile"><div class="t">WWPlayer 手机端 <span class="ext">.json</span></div><div class="d">完整备份格式，供手机客户端「导入备份」使用</div></button>
+      <button class="fmt" data-export="wwmobile"><div class="t">WWPlayer 手机端 <span class="ext">.json</span></div><div class="d">完整备份格式；不含密码，导入后需重新登录</div></button>
       <button class="fmt" data-export="capyplayer"><div class="t">CapyPlayer <span class="ext">.json</span></div><div class="d">加密数据库备份格式</div></button>
       <button class="fmt" data-export="aiplayer"><div class="t">AI Player <span class="ext">.json</span></div><div class="d">V1 加密服务器配置</div></button>
       <button class="fmt" data-export="afusekt"><div class="t">AfuseKt <span class="ext">.json</span></div><div class="d">明文配置</div><div class="w">⚠ 该格式不保存 User ID / Token</div></button>
@@ -940,7 +940,14 @@ footer { color: var(--dim); font-size: 12px; text-align: center; padding: 30px 0
     });
     var doc = backup ? JSON.parse(JSON.stringify(backup)) : wwMobileSkeleton();
     doc.servers = servers.map(function (s) {
-      var o = baseRaw(s, 'wwmobile');
+      var o = (s.raw && s.raw.wwmobile) ? JSON.parse(JSON.stringify(s.raw.wwmobile)) : baseRaw(s, 'wwmobile');
+      // The mobile schemaVersion 2 backup does NOT carry credential fields at
+      // the server level (only userId / userName are part of its model). Writing
+      // password / accessToken makes the app reject the import as "sensitive
+      // fields". Strip them and flag credentialsIncluded as false; the user
+      // re-logs in once on the phone. Identity fields below are kept.
+      delete o.password;
+      delete o.accessToken;
       var oldLines = Array.isArray(o.lines) ? o.lines : [];
       var lines = s.lines.filter(function (l) { return l.url; }).map(function (l, j) {
         return {
@@ -958,15 +965,11 @@ footer { color: var(--dim); font-size: 12px; text-align: center; padding: 30px 0
         remark: s.remark || '', serverType: s.type || 'emby',
         requiresAuthentication: true, userId: s.userId || '', userName: s.username || ''
       });
-      // Credential field names follow the same app's data model. If a future
-      // version renames them, the file still imports (login again may be needed).
-      if (s.password) o.password = s.password;
-      if (s.accessToken) o.accessToken = s.accessToken;
       return o;
     });
     doc.schemaVersion = 2;
     doc.exportedAtMs = nowMs();
-    doc.credentialsIncluded = servers.some(function (s) { return !!(s.password || s.accessToken); });
+    doc.credentialsIncluded = false;
     return doc;
   }
 

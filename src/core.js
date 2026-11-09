@@ -556,7 +556,14 @@
     });
     var doc = backup ? JSON.parse(JSON.stringify(backup)) : wwMobileSkeleton();
     doc.servers = servers.map(function (s) {
-      var o = baseRaw(s, 'wwmobile');
+      var o = (s.raw && s.raw.wwmobile) ? JSON.parse(JSON.stringify(s.raw.wwmobile)) : baseRaw(s, 'wwmobile');
+      // The mobile schemaVersion 2 backup does NOT carry credential fields at
+      // the server level (only userId / userName are part of its model). Writing
+      // password / accessToken makes the app reject the import as "sensitive
+      // fields". Strip them and flag credentialsIncluded as false; the user
+      // re-logs in once on the phone. Identity fields below are kept.
+      delete o.password;
+      delete o.accessToken;
       var oldLines = Array.isArray(o.lines) ? o.lines : [];
       var lines = s.lines.filter(function (l) { return l.url; }).map(function (l, j) {
         return {
@@ -574,15 +581,11 @@
         remark: s.remark || '', serverType: s.type || 'emby',
         requiresAuthentication: true, userId: s.userId || '', userName: s.username || ''
       });
-      // Credential field names follow the same app's data model. If a future
-      // version renames them, the file still imports (login again may be needed).
-      if (s.password) o.password = s.password;
-      if (s.accessToken) o.accessToken = s.accessToken;
       return o;
     });
     doc.schemaVersion = 2;
     doc.exportedAtMs = nowMs();
-    doc.credentialsIncluded = servers.some(function (s) { return !!(s.password || s.accessToken); });
+    doc.credentialsIncluded = false;
     return doc;
   }
 

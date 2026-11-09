@@ -44,6 +44,15 @@ for (const src of B.FORMATS) {
       assert.equal(back[i].name, servers[i].name, `afusekt name ${i}`);
       assert.equal(norm(back[i].url), norm(servers[i].url), `afusekt url ${i}`);
       assert.equal(back[i].username, servers[i].username, `afusekt user ${i}`);
+    } else if (src === 'wwmobile') {
+      // Mobile WWPlayer backups must not carry credential fields; password /
+      // accessToken are intentionally dropped (the app rejects them on import).
+      assert.equal(back[i].name, servers[i].name, `wwmobile name ${i}`);
+      assert.equal(norm(back[i].url), norm(servers[i].url), `wwmobile url ${i}`);
+      assert.equal(back[i].username, servers[i].username, `wwmobile user ${i}`);
+      assert.equal(back[i].userId, servers[i].userId, `wwmobile userId ${i}`);
+      assert.equal(back[i].password, '', `wwmobile password stripped ${i}`);
+      assert.equal(back[i].accessToken, '', `wwmobile token stripped ${i}`);
     } else {
       const withType = src !== 'wwplayer';
       assert.equal(core(back[i], withType), core(servers[i], withType), `round-trip ${src} #${i}`);
@@ -139,6 +148,15 @@ assert.equal(B.parseQuickText('名称 | https://x.example.com | u | p').length, 
   const outDoc = JSON.parse((await B.build(got, 'wwmobile')).text);
   assert.equal(outDoc.preferences.themeMode, 'System', 'mobile preferences preserved');
   assert.equal(outDoc.servers[0].displayName, '虚构手机端', 'mobile server rebuilt');
+}
+
+// wwmobile must never emit credential fields, even when the source has them.
+{
+  const cred = [{ name: 'Secret', url: 'https://secret.example.com', username: 'u', password: 'p', userId: 'id1', accessToken: 'tok', lines: [{ name: 'a', url: 'https://secret.example.com', active: true }] }];
+  const doc = JSON.parse((await B.build(cred, 'wwmobile')).text);
+  assert.equal(doc.credentialsIncluded, false, 'wwmobile credentialsIncluded must be false');
+  assert.ok(!doc.servers.some(s => 'password' in s || 'accessToken' in s), 'wwmobile must not carry password/accessToken');
+  assert.equal(doc.servers[0].userId, 'id1', 'wwmobile keeps identity userId');
 }
 
 console.log(`OK: ${checked} formats round-tripped, ${B.FORMATS.length}x${B.FORMATS.length + 1} cross-format builds, CSV / quick text / official-style Hills v2+v3 / mobile WWPlayer passed.`);
