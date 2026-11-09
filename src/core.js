@@ -4,9 +4,9 @@
  * Pure local format conversion for Emby/Jellyfin player configuration
  * backups. No network calls, no telemetry, no server login.
  *
- * The codecs are compatible with the "other apps" interchange files
- * produced by Rodel Player (Windows). All crypto happens locally with
- * Web Crypto (or Node WebCrypto when running the self-test).
+ * The codecs handle the server-config interchange backups shared by
+ * several media players. All crypto happens locally with Web Crypto
+ * (or Node WebCrypto when running the self-test).
  */
 (function (root, factory) {
   var api = factory();
@@ -440,7 +440,7 @@
       configs.push(await cbcEncryptJson(YAMBY_KEY, YAMBY_KEY.subarray(0, 16), o));
     }
     return {
-      from: 'RodelPlayer', version: '1.0', export_time: nowSec(),
+      from: 'EmbyBridge', version: '1.0', export_time: nowSec(),
       configs: configs, icon_packages: {}, settings: {}, additional_data: {}, _key: null
     };
   }
@@ -469,7 +469,7 @@
       configs.push(await cbcEncryptJson(LIN_KEY, LIN_KEY.subarray(0, 16), o));
     }
     return {
-      from: 'RodelPlayer', version: '1.0', export_time: nowSec(), configs: configs,
+      from: 'EmbyBridge', version: '1.0', export_time: nowSec(), configs: configs,
       linplayer_settings: null, _key: bytesToB64(LIN_KEY)
     };
   }
@@ -578,8 +578,8 @@
       });
       return o;
     });
-    // Rodel / Hills write the inner document without its final closing brace
-    // (a quirk of the original codec). Reproduce that byte-for-byte so the
+    // The original Hills codec writes the inner document without its final
+    // closing brace. Reproduce that byte-for-byte so the
     // generated backup is accepted by the same importers. parse() tolerates
     // both variants.
     var innerText = JSON.stringify({ data: data }).replace(/\}$/, '');
@@ -640,7 +640,7 @@
     var pretty = format === 'wwplayer' || format === 'bridge' ? JSON.stringify(obj, null, 2) : JSON.stringify(obj);
     return {
       text: pretty,
-      filename: 'rodel-' + format + '-' + stamp() + '.' + META[format].ext,
+      filename: 'emby-bridge-' + format + '-' + stamp() + '.' + META[format].ext,
       mime: 'application/json;charset=utf-8'
     };
   }

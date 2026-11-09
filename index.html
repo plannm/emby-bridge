@@ -252,7 +252,7 @@ footer { color: var(--dim); font-size: 12px; text-align: center; padding: 30px 0
       </div>
       <div>
         <h1>Emby Bridge · 播放器配置互转</h1>
-        <div class="sub">把 Windows 版 Rodel Player 的「其它应用」备份，变成 Mac / 手机 / 网页都能处理的文件</div>
+        <div class="sub">把各播放器的服务器配置备份，变成 Mac / 手机 / 网页都能处理的文件</div>
       </div>
     </div>
     <div class="badges">
@@ -264,7 +264,7 @@ footer { color: var(--dim); font-size: 12px; text-align: center; padding: 30px 0
     </div>
     <div class="notice">
       <b>⚠ 使用前请先读：这是实验性工具，不保证可用。</b><br>
-      各播放器的备份格式是根据手头有限的样本逆向出来的，官方客户端版本更新、或备份来源不同（官方导出 vs Rodel 导出）都可能让解析/导入失败。目前已确认的差异包括：Hills 官方导出的加密头与 Rodel 不同（已做容错，但不代表其它版本也兼容）、CapyPlayer 新版（database_version 22）备份本身不保存 Access Token、AfuseKt 不保存 Token / User ID、WWPlayer V1 只是可逆混淆而非强加密；跨格式转换只迁移通用连接字段，播放器特有的偏好、观看记录、图标包等设置可能丢失。<br>
+      各播放器的备份格式是根据手头有限的样本逆向出来的，官方客户端版本更新、或备份来自不同软件/版本，都可能让解析/导入失败。目前已确认的差异包括：Hills 不同来源的备份加密头可能不同（已做容错，但不代表其它版本也兼容）、CapyPlayer 新版（database_version 22）备份本身不保存 Access Token、AfuseKt 不保存 Token / User ID、WWPlayer V1 只是可逆混淆而非强加密；跨格式转换只迁移通用连接字段，播放器特有的偏好、观看记录、图标包等设置可能丢失。<br>
       <b>请务必保留原始备份文件</b>，导出后先在目标 App 里逐台核对能否连上，确认无误再替换或删除旧配置；不要把这个工具生成的备份当作唯一副本。
     </div>
   </header>
@@ -339,10 +339,10 @@ footer { color: var(--dim); font-size: 12px; text-align: center; padding: 30px 0
         ① 格式来自对有限样本的兼容实现，不是各播放器的官方规范；官方客户端升级后可能直接失效。<br>
         ② <b>AfuseKt</b> 明文结构没有 User ID / Access Token，转到该格式必然丢失这两项，导入后需重新登录。<br>
         ③ <b>CapyPlayer 新版</b>（<code>database_version: 22</code>）备份本身不含 Access Token；同格式往返会保留偏好、观看统计等其它表，但转成别的格式再转回来就只剩服务器信息。<br>
-        ④ <b>Hills 官方导出</b>与 Rodel 导出的 CBC IV 尾部不同，现按「重建 JSON 头」容错解析；其它版本若换了结构仍可能失败。<br>
+        ④ <b>Hills 不同来源的备份</b> CBC IV 尾部可能不同，现按「重建 JSON 头」容错解析；其它版本若换了结构仍可能失败。<br>
         ⑤ <b>WWPlayer V1</b> 是可逆混淆，官方也提示 <code>.wwpcfg</code> 应视为凭据文件。<br>
         ⑥ 跨格式转换只迁移名称 / 地址 / 账号 / 密码 / Token / 线路等通用字段，各播放器特有的开关与设置不保证保留。<br>
-        ⑦ <b>Hills v3</b>（<code>version: 3</code>，带 <code>serversData</code> / <code>settings</code> / <code>iconPacks</code> 等加密段）现在可以导入，读取的是其中的 <code>data</code> 段；但导出回 Hills 仍生成 v2 结构，新版 App 是否接受、v3 的其它设置能否保留，都<b>没有实测过</b>。建议把 v3 转成其它格式使用，或仍用 Rodel Player 做 Hills 方向的导出。<br>
+        ⑦ <b>Hills v3</b>（<code>version: 3</code>，带 <code>serversData</code> / <code>settings</code> / <code>iconPacks</code> 等加密段）现在可以导入，读取的是其中的 <code>data</code> 段；但导出回 Hills 仍生成 v2 结构，新版 App 是否接受、v3 的其它设置能否保留，都<b>没有实测过</b>。建议把 v3 转成其它格式使用，或直接用原生播放器自带的导出功能生成 Hills 备份。<br>
         ⑧ 目前只在少数真实备份上验证过，样本以外的组合没有覆盖。出问题请保留原始文件，并尽量附上可脱敏的样本反馈。
       </p>
     </details>
@@ -351,8 +351,8 @@ footer { color: var(--dim); font-size: 12px; text-align: center; padding: 30px 0
       <p>它只做一件事：把你已有的播放器备份文件<b>读进来</b>，转换成另一种播放器认识的备份文件<b>写出去</b>。全部加解密都在你的浏览器里完成，页面通过 CSP 把 <code>connect-src</code> 设为 <code>none</code>，从浏览器层面禁掉了 fetch / XHR / WebSocket 等一切外联，因此<b>绝不会去访问或登录你的 Emby 服务器</b>，也就不存在触发服务器风控、封号的问题。页面不引用任何外部 CDN 资源，可离线使用。</p>
     </details>
     <details class="faq">
-      <summary>典型用法：Windows 上导出 → Mac / 手机上导入</summary>
-      <p>① 在 Windows 版 Rodel Player 的「设置 → 备份与恢复 → 其它应用」里，任选一个应用点「导出配置」，得到一个备份文件。<br>
+      <summary>典型用法：导出一份备份 → 在任意设备上转换</summary>
+      <p>① 在任意支持「导出服务器配置 / 备份」的播放器里导出一份文件（.json / .lpbak / .wwpcfg 等）。<br>
          ② 把这个文件传到 Mac / 手机（AirDrop、微信文件传输、网盘均可），在本网页「导入备份」里打开。<br>
          ③ 检查、修改、去重，然后点目标播放器对应的导出按钮，把下载下来的文件交给目标 App 的「导入配置」即可。<br>
          也可以先导出「通用中间格式」长期保存；下次打开网页直接导入它，再转成任意播放器格式。</p>
@@ -373,7 +373,7 @@ footer { color: var(--dim); font-size: 12px; text-align: center; padding: 30px 0
       <p><code>index.html</code> 是单文件，没有任何外部依赖：直接双击可用，或把仓库推到 GitHub 后在 Settings → Pages 选择主分支根目录即可；绑定自定义域名时加一条 CNAME 记录并在 Pages 里填写域名。建议开启 HTTPS（Web Crypto 在 HTTPS、localhost 和大多数浏览器的本地文件下可用）。页面不需要后端、不需要数据库、不需要 API Key。</p>
     </details>
     <div class="note warn" style="margin-top:16px">
-      <b>免责声明：</b>本工具仅用于迁移你本人有权使用的播放器配置。请不要用它处理他人的凭据，也不要把含密码的备份文件提交到公开仓库或发送给第三方。工具与 Rodel Player 及各播放器官方无关联。
+      <b>免责声明：</b>本工具仅用于迁移你本人有权使用的播放器配置。请不要用它处理他人的凭据，也不要把含密码的备份文件提交到公开仓库或发送给第三方。本工具与各播放器官方均无关联。
     </div>
   </section>
 
@@ -401,9 +401,9 @@ footer { color: var(--dim); font-size: 12px; text-align: center; padding: 30px 0
  * Pure local format conversion for Emby/Jellyfin player configuration
  * backups. No network calls, no telemetry, no server login.
  *
- * The codecs are compatible with the "other apps" interchange files
- * produced by Rodel Player (Windows). All crypto happens locally with
- * Web Crypto (or Node WebCrypto when running the self-test).
+ * The codecs handle the server-config interchange backups shared by
+ * several media players. All crypto happens locally with Web Crypto
+ * (or Node WebCrypto when running the self-test).
  */
 (function (root, factory) {
   var api = factory();
@@ -837,7 +837,7 @@ footer { color: var(--dim); font-size: 12px; text-align: center; padding: 30px 0
       configs.push(await cbcEncryptJson(YAMBY_KEY, YAMBY_KEY.subarray(0, 16), o));
     }
     return {
-      from: 'RodelPlayer', version: '1.0', export_time: nowSec(),
+      from: 'EmbyBridge', version: '1.0', export_time: nowSec(),
       configs: configs, icon_packages: {}, settings: {}, additional_data: {}, _key: null
     };
   }
@@ -866,7 +866,7 @@ footer { color: var(--dim); font-size: 12px; text-align: center; padding: 30px 0
       configs.push(await cbcEncryptJson(LIN_KEY, LIN_KEY.subarray(0, 16), o));
     }
     return {
-      from: 'RodelPlayer', version: '1.0', export_time: nowSec(), configs: configs,
+      from: 'EmbyBridge', version: '1.0', export_time: nowSec(), configs: configs,
       linplayer_settings: null, _key: bytesToB64(LIN_KEY)
     };
   }
@@ -975,8 +975,8 @@ footer { color: var(--dim); font-size: 12px; text-align: center; padding: 30px 0
       });
       return o;
     });
-    // Rodel / Hills write the inner document without its final closing brace
-    // (a quirk of the original codec). Reproduce that byte-for-byte so the
+    // The original Hills codec writes the inner document without its final
+    // closing brace. Reproduce that byte-for-byte so the
     // generated backup is accepted by the same importers. parse() tolerates
     // both variants.
     var innerText = JSON.stringify({ data: data }).replace(/\}$/, '');
@@ -1037,7 +1037,7 @@ footer { color: var(--dim); font-size: 12px; text-align: center; padding: 30px 0
     var pretty = format === 'wwplayer' || format === 'bridge' ? JSON.stringify(obj, null, 2) : JSON.stringify(obj);
     return {
       text: pretty,
-      filename: 'rodel-' + format + '-' + stamp() + '.' + META[format].ext,
+      filename: 'emby-bridge-' + format + '-' + stamp() + '.' + META[format].ext,
       mime: 'application/json;charset=utf-8'
     };
   }

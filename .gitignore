@@ -1,9 +1,9 @@
-# Never commit real backups: they contain credentials.
+# Never commit real backups or exported config files: they contain credentials.
+*.json
+!package.json
 *.lpbak
 *.wwpcfg
-rodel-*.json
-!package.json
-emby-servers-*.csv
+*.csv
 sample-data/
 _research/
 node_modules/
