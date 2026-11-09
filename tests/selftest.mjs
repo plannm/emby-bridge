@@ -89,4 +89,28 @@ assert.equal(B.parseQuickText('名称 | https://x.example.com | u | p').length, 
   assert.ok(got[0].lines.some(l => l.url === 'https://proxy.example.com'), 'official hills route');
 }
 
-console.log(`OK: ${checked} formats round-tripped, 7x8 cross-format builds, CSV / quick text / official-style Hills passed.`);
+// Regression: Hills v3 envelope (version 3 plus extra encrypted segments).
+// The server list still lives in `data`; detect must not hard-code version 2.
+{
+  const hillsKey = Buffer.from('9d2729bd3afe5536669610e25b3ef6b3a7fd1efe2a065187101b144951617bce', 'hex');
+  const iv = Buffer.from('bc322377137f312c2bff7a920aad959e', 'hex');
+  const inner = { data: [{
+    displyName: '虚构 v3', serverName: '虚构 v3', serverUrl: 'https://v3.example.com',
+    username: 'demo', password: 'pw',
+    authenticateJson: JSON.stringify({ User: { Id: 'uid-v3' }, AccessToken: 'tok-v3' }),
+    serverRoutingList: [{ id: 'r', name: '反代', url: 'https://route.example.com' }]
+  }] };
+  const cipher = await B._internal.cbcEncrypt(hillsKey, iv, new TextEncoder().encode(JSON.stringify(inner).replace(/\}$/, '')));
+  const v3 = JSON.stringify({
+    version: 3, data: Buffer.from(cipher).toString('base64'),
+    settings: 'AAAA', mpvConf: null, iconPacks: 'BBBB', customIcons: null,
+    enableImpeller: null, serversData: 'CCCC'
+  });
+  assert.equal(B.detect(v3, 'HillsBackup-261109_1523.json'), 'hills', 'detect hills v3');
+  const got = (await B.parse(v3, 'hills')).servers;
+  assert.equal(got.length, 1, 'hills v3 server count');
+  assert.equal(got[0].accessToken, 'tok-v3', 'hills v3 token');
+  assert.equal(got[0].url, 'https://v3.example.com', 'hills v3 url');
+}
+
+console.log(`OK: ${checked} formats round-tripped, 7x8 cross-format builds, CSV / quick text / official-style Hills v2+v3 passed.`);

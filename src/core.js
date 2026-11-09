@@ -258,7 +258,11 @@
     if (o && o.format === 'emby-bridge') return 'bridge';
     if (o && Array.isArray(o.configs) && o._key !== undefined) return fn.endsWith('.lpbak') ? 'linplayer' : 'yamby';
     if (o && Array.isArray(o.configs)) return 'yamby';
-    if (o && o.version === 2 && typeof o.data === 'string' && 'iconPacks' in o) return 'hills';
+    // Hills v2 and v3 (v3 adds encrypted settings / iconPacks / serversData).
+    // Do not hard-code a single version number: official exports keep adding
+    // fields, and the server list still lives in the same encrypted `data`.
+    if (o && typeof o.data === 'string' && Number(o.version) >= 2 && ('iconPacks' in o || 'serversData' in o)) return 'hills';
+    if (/hillsbackup/i.test(fn) && typeof o.data === 'string') return 'hills';
     if (o && typeof o.data === 'string' && Object.keys(o).length <= 2) return 'aiplayer';
     if (fn.endsWith('.lpbak')) return 'linplayer';
     if (fn.endsWith('.wwpcfg')) return 'wwplayer';

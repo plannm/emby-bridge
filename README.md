@@ -35,6 +35,7 @@
 - **AfuseKt** 明文结构没有 User ID / Access Token 字段，转到该格式必然丢失，导入后需重新登录。
 - **CapyPlayer 新版**（`database_version: 22`，例如 iPhone 官方导出）备份本身不保存 Access Token；同格式往返会保留偏好、观看统计、徽章包等其它表以及 `app_version` / `database_version`，但转成别的格式再转回来就只剩服务器信息。旧版（`database_version: 5`，Rodel 导出）才有 `token` 字段。
 - **Hills 官方导出**与 Rodel 导出的 CBC IV 尾部不同，解密后第一块会损坏；现已用「重建 JSON 头」容错解析，但不保证其它版本也兼容。
+- **Hills v3**（`version: 3`，带 `serversData` / `settings` / `iconPacks` 等加密段）现在可以导入，读取的是其中的 `data` 段（与 v2 结构相同，`serversData` 内没有额外服务器）；但**导出回 Hills 仍生成 v2 结构**，新版 App 是否接受、v3 的其它设置能否保留均未实测。建议把 v3 转成其它格式使用，或继续用 Rodel Player 做 Hills 方向的导出。
 - **WWPlayer V1** 是可逆混淆而非强加密，官方也提示 `.wwpcfg` 应视为凭据文件。
 - 跨格式转换只迁移名称 / 地址 / 账号 / 密码 / Token / 线路等通用字段，播放器特有的开关与设置不保证保留。
 - 导出文件请先在目标播放器里验证能导入、能连上，再替换旧配置；**不要覆盖或删除原始备份**。
