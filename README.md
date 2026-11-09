@@ -1,0 +1,83 @@
+# Emby Bridge · 播放器配置互转
+
+把 Windows 版 Rodel Player「设置 → 备份与恢复 → 其它应用」的导入/导出能力，单独做成一个**纯前端、零后端、跨平台**的小工具。在 Mac、iPhone、安卓、平板或任意浏览器里，把一种播放器的配置备份转换成另一种，不用再对着几十台 Emby 服务器手工重录账号。
+
+👉 直接用：打开根目录的 **`index.html`**（单文件，双击即可），或把它部署到 GitHub Pages / 自己的域名。
+
+---
+
+## 它能做什么
+
+1. **导入**：拖入 Rodel 导出的任意一种播放器备份；自动识别格式并解密，列出所有服务器。
+2. **编辑**：修改名称、地址、账号、密码、User ID、Token、图标、备用线路；支持批量粘贴、CSV、去重、搜索、勾选导出范围。
+3. **导出**：一键生成目标播放器可导入的备份文件，文件名/扩展名与 Rodel 导出的保持一致。
+
+| 播放器 | 文件 | 支持 |
+| --- | --- | --- |
+| Hills | `.json` | 读 / 写 |
+| AfuseKt | `.json` | 读 / 写（明文，不含 User ID / Token） |
+| Yamby / Tsukimi CommonConfig | `.json` | 读 / 写 |
+| CapyPlayer | `.json` | 读 / 写 |
+| LinPlayer | `.lpbak` | 读 / 写 |
+| WWPlayer | `.wwpcfg` | 读 / 写 |
+| AI Player | `.json` | 读 / 写 |
+| 通用中间格式 / CSV | `.json` / `.csv` | 读 / 写（明文，便于长期保存与批量编辑） |
+
+七种格式都用真实的 Rodel 导出文件做过互转验证：49 组「解析 → 生成 → 再解析」中，43 组字段完全一致；剩下 6 组全部是导出到 AfuseKt 时丢失 User ID / Token，因为该格式本身没有这两个字段。
+
+---
+
+## 隐私与安全（重要）
+
+- **绝不联网**：页面通过 CSP 把 `connect-src` 设为 `none`，禁掉 fetch / XHR / WebSocket / Beacon；没有外部脚本、字体、图片、统计代码。所有加解密用浏览器内置的 Web Crypto 在本地完成。
+- **绝不登录服务器**：工具只读写备份文件，不会向任何 Emby / Jellyfin 地址发起请求，也不会拿账号密码去试登录，因此不会触发服务器的风控或封号。
+- **不落盘**：不写 `localStorage`、Cookie、IndexedDB；刷新页面即清空。
+- **备份即凭据**：导出文件里包含账号、密码与访问令牌（或等价的可逆数据）。请当作密码文件保管，**不要提交到公开仓库、不要传网盘分享链接、不要发给别人**。仓库的 `.gitignore` 已排除常见备份文件名。
+
+> 本工具仅用于迁移你本人有权使用的播放器配置，与 Rodel Player 及各播放器官方无关联。
+
+---
+
+## 部署到域名 / GitHub Pages
+
+`index.html` 是**自包含单文件**，不需要构建、不需要服务器、不需要 API Key：
+
+1. 把本仓库推到 GitHub（**只推代码，别推真实备份**）。
+2. 仓库 Settings → Pages → Build and deployment → Source 选 `Deploy from a branch`，分支选 `main`、目录选 `/ (root)`。
+3. 几分钟后即可用 `https://<用户名>.github.io/<仓库名>/` 访问。
+4. 自定义域名：在 DNS 加 CNAME 指向 `<用户名>.github.io`，在 Pages 的 Custom domain 填域名并开启 HTTPS；仓库里放一个内容为域名的 `CNAME` 文件即可。
+
+也可以把 `index.html` 放到任意静态托管（Cloudflare Pages、Vercel、Nginx、对象存储静态网站）。建议 HTTPS —— Web Crypto 在 HTTPS、localhost 以及主流浏览器的 `file://` 下都可用。
+
+---
+
+## 本项目结构
+
+| 文件 | 说明 |
+| --- | --- |
+| `index.html` | 构建产物，单文件，可直接双击或部署 |
+| `src/core.js` | 格式识别、解析、生成、加解码（纯逻辑，浏览器/Node 通用） |
+| `src/app.js` | 页面交互 |
+| `src/style.css` | 深色响应式样式 |
+| `src/template.html` | 页面骨架 |
+| `build.mjs` | 把 src 内联成 `index.html` |
+| `tests/selftest.mjs` | 用虚构数据跑全格式往返测试 |
+| `docs/FORMATS.md` | 各备份格式的技术说明 |
+
+本地开发：
+
+```bash
+node build.mjs              # 重新生成 index.html
+node tests/selftest.mjs     # 自检（不需要网络、不需要安装依赖）
+```
+
+---
+
+## 使用流程示例
+
+1. Windows 上：Rodel Player → 设置 → 备份与恢复 → 其它应用 → 任选一个应用点「导出配置」。
+2. 把文件传到 Mac / 手机，打开本网页，拖进「导入备份」。
+3. 检查列表，必要时批量粘贴补齐几十台服务器、去重。
+4. 点目标播放器的导出卡片 → 得到 `.json` / `.lpbak` / `.wwpcfg` → 在目标 App 里「导入配置」。
+
+建议同时导出一份「通用中间格式」自己留档：它是明文 JSON，以后在任何设备上打开本网页导入它，就能再转成任意播放器格式。

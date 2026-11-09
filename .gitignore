@@ -1,0 +1,11 @@
+# Never commit real backups: they contain credentials.
+*.lpbak
+*.wwpcfg
+rodel-*.json
+!package.json
+emby-servers-*.csv
+sample-data/
+_research/
+node_modules/
+.DS_Store
+Thumbs.db

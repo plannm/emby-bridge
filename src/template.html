@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'">
+<meta name="description" content="在浏览器本地把 Emby / Jellyfin 播放器配置备份互相转换，支持 Hills、Yamby、LinPlayer、WWPlayer、CapyPlayer、AI Player、AfuseKt。纯离线，不联网，不登录服务器。">
+<title>Emby Bridge · 播放器配置互转</title>
+<style>/*__STYLE__*/</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="brand">
+      <div class="logo" aria-hidden="true">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0e1020" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 7h11a3 3 0 0 1 0 6H9a3 3 0 0 0 0 6h11"/><circle cx="4" cy="7" r="1.6" fill="#0e1020"/><circle cx="20" cy="19" r="1.6" fill="#0e1020"/>
+        </svg>
+      </div>
+      <div>
+        <h1>Emby Bridge · 播放器配置互转</h1>
+        <div class="sub">把 Windows 版 Rodel Player 的「其它应用」备份，变成 Mac / 手机 / 网页都能处理的文件</div>
+      </div>
+    </div>
+    <div class="badges">
+      <span class="badge">✓ 纯浏览器本地运行</span>
+      <span class="badge blue">✓ 零网络请求（已禁用联网）</span>
+      <span class="badge">✓ 不会连接或登录任何 Emby 服务器</span>
+      <span class="badge amber">⚠ 备份含明文密码，请自行保管</span>
+    </div>
+  </header>
+
+  <section class="panel">
+    <div class="panel-head">
+      <span class="step">1</span>
+      <div><h2 class="panel-title">导入备份</h2><p class="panel-desc">拖入或选择播放器导出的配置文件，可一次选多个。同地址 + 同账号会自动合并，不会重复。</p></div>
+    </div>
+    <div class="drop" id="drop">
+      <span class="icon" aria-hidden="true">⇩</span>
+      <div class="big">把备份文件拖到这里</div>
+      <div class="small">支持 .json / .lpbak / .wwpcfg / .csv，也能直接粘贴地址清单</div>
+      <button class="btn primary" id="pickBtn">选择文件</button>
+      <input type="file" id="fileInput" multiple accept=".json,.lpbak,.wwpcfg,.csv,.txt,application/json,text/plain">
+    </div>
+    <div class="filelist" id="fileList"></div>
+    <div class="note gray" style="margin-top:14px">
+      文件只在当前页面内存中解析，<b>不会上传、不会缓存、不会写入 localStorage</b>；刷新页面即全部清空。页面本身也没有任何外部脚本、字体或统计代码。
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <span class="step">2</span>
+      <div><h2 class="panel-title">检查与编辑服务器</h2><p class="panel-desc">点「编辑」展开详细字段；用勾选框决定哪些服务器参与导出。</p></div>
+      <div class="spacer"></div>
+      <span class="count" id="count">共 0 台</span>
+    </div>
+    <div class="toolbar">
+      <button class="btn" id="addBtn">+ 添加一台</button>
+      <button class="btn" id="pasteBtn">批量粘贴 / CSV</button>
+      <button class="btn" id="dedupeBtn">去重</button>
+      <button class="btn" id="selectAll">全选 / 反选</button>
+      <button class="btn" id="expandAll">展开 / 收起</button>
+      <button class="btn" id="secretBtn">显示密码</button>
+      <div class="spacer"></div>
+      <input class="search" id="search" type="search" placeholder="搜索名称 / 地址 / 账号">
+      <button class="btn ghost danger" id="clearBtn">清空</button>
+    </div>
+    <div id="serverList"></div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <span class="step">3</span>
+      <div><h2 class="panel-title">导出为目标格式</h2><p class="panel-desc">点一下即在本地生成文件并下载，文件名与各播放器习惯保持一致。</p></div>
+    </div>
+    <div class="fmt-grid">
+      <button class="fmt" data-export="hills"><div class="t">Hills <span class="ext">.json</span></div><div class="d">macOS / iOS 常用播放器，加密配置</div></button>
+      <button class="fmt" data-export="yamby"><div class="t">Yamby / Tsukimi <span class="ext">.json</span></div><div class="d">通用 CommonConfig 加密格式</div></button>
+      <button class="fmt" data-export="linplayer"><div class="t">LinPlayer <span class="ext">.lpbak</span></div><div class="d">密钥随文件附带，兼容性好</div></button>
+      <button class="fmt" data-export="wwplayer"><div class="t">WWPlayer <span class="ext">.wwpcfg</span></div><div class="d">V1 便携配置交换格式</div></button>
+      <button class="fmt" data-export="capyplayer"><div class="t">CapyPlayer <span class="ext">.json</span></div><div class="d">加密数据库备份格式</div></button>
+      <button class="fmt" data-export="aiplayer"><div class="t">AI Player <span class="ext">.json</span></div><div class="d">V1 加密服务器配置</div></button>
+      <button class="fmt" data-export="afusekt"><div class="t">AfuseKt <span class="ext">.json</span></div><div class="d">明文配置</div><div class="w">⚠ 该格式不保存 User ID / Token</div></button>
+      <button class="fmt" data-export="bridge"><div class="t">通用中间格式 <span class="ext">.json</span></div><div class="d">明文、可手工编辑，适合长期保存与跨设备迁移</div></button>
+      <button class="fmt" data-export="csv"><div class="t">CSV 表格 <span class="ext">.csv</span></div><div class="d">用 Excel / 表格软件批量整理</div></button>
+    </div>
+    <div class="note" id="exportHint" style="margin-top:16px">将导出已勾选的 0 台服务器。</div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <span class="step">?</span>
+      <div><h2 class="panel-title">使用说明与注意事项</h2></div>
+    </div>
+    <details class="faq" open>
+      <summary>它到底做什么？安全吗？</summary>
+      <p>它只做一件事：把你已有的播放器备份文件<b>读进来</b>，转换成另一种播放器认识的备份文件<b>写出去</b>。全部加解密都在你的浏览器里完成，页面通过 CSP 把 <code>connect-src</code> 设为 <code>none</code>，从浏览器层面禁掉了 fetch / XHR / WebSocket 等一切外联，因此<b>绝不会去访问或登录你的 Emby 服务器</b>，也就不存在触发服务器风控、封号的问题。页面不引用任何外部 CDN 资源，可离线使用。</p>
+    </details>
+    <details class="faq">
+      <summary>典型用法：Windows 上导出 → Mac / 手机上导入</summary>
+      <p>① 在 Windows 版 Rodel Player 的「设置 → 备份与恢复 → 其它应用」里，任选一个应用点「导出配置」，得到一个备份文件。<br>
+         ② 把这个文件传到 Mac / 手机（AirDrop、微信文件传输、网盘均可），在本网页「导入备份」里打开。<br>
+         ③ 检查、修改、去重，然后点目标播放器对应的导出按钮，把下载下来的文件交给目标 App 的「导入配置」即可。<br>
+         也可以先导出「通用中间格式」长期保存；下次打开网页直接导入它，再转成任意播放器格式。</p>
+    </details>
+    <details class="faq">
+      <summary>批量添加支持哪些写法？</summary>
+      <p>点「批量粘贴 / CSV」，支持三种：<br>
+         · <b>CSV</b>：表头为 <code>name,type,url,username,password,userId,accessToken,icon,lines</code>（可只写其中几列），线路列用 <code>名称=地址|名称=地址</code> 表示；<br>
+         · <b>每行一台</b>：<code>名称 | https://地址 | 用户名 | 密码</code>，分隔符也可用逗号、分号或制表符；只写 URL 也可以；<br>
+         · <b>通用中间格式 JSON</b>：本工具自己导出的文件。</p>
+    </details>
+    <details class="faq">
+      <summary>各种格式有什么限制？</summary>
+      <p>7 种播放器格式均已在本地用真实导出文件做过互转往返验证。<b>AfuseKt</b> 的明文结构里没有 User ID / Access Token 字段，转到该格式会丢失这两项，导入后需要重新登录一次；<b>WWPlayer V1</b> 是可逆混淆而非强加密，官方也提示应把 <code>.wwpcfg</code> 当作凭据文件保管。导出的备份里包含账号、密码与令牌明文（或等价的可逆数据），请勿上传到公开仓库、网盘分享链接或陌生网页。</p>
+    </details>
+    <details class="faq">
+      <summary>部署到自己的域名 / GitHub Pages</summary>
+      <p><code>index.html</code> 是单文件，没有任何外部依赖：直接双击可用，或把仓库推到 GitHub 后在 Settings → Pages 选择主分支根目录即可；绑定自定义域名时加一条 CNAME 记录并在 Pages 里填写域名。建议开启 HTTPS（Web Crypto 在 HTTPS、localhost 和大多数浏览器的本地文件下可用）。页面不需要后端、不需要数据库、不需要 API Key。</p>
+    </details>
+    <div class="note warn" style="margin-top:16px">
+      <b>免责声明：</b>本工具仅用于迁移你本人有权使用的播放器配置。请不要用它处理他人的凭据，也不要把含密码的备份文件提交到公开仓库或发送给第三方。工具与 Rodel Player 及各播放器官方无关联。
+    </div>
+  </section>
+
+  <footer>Emby Bridge · 本地优先，零外联 · 所有格式编解码均在浏览器内完成</footer>
+</div>
+
+<div class="modal-mask" id="modal">
+  <div class="modal">
+    <h3>批量添加服务器</h3>
+    <p>粘贴 CSV、每行一台的地址清单，或本工具导出的通用中间格式 JSON。相同地址 + 账号会自动合并。</p>
+    <textarea id="pasteText" spellcheck="false" placeholder="示例：
+我的服务器 | https://emby.example.com:8096 | admin | password
+备用服务器 | https://emby2.example.com | admin | password"></textarea>
+    <div class="modal-actions">
+      <button class="btn" id="modalCancel">取消</button>
+      <button class="btn primary" id="modalOk">添加到列表</button>
+    </div>
+  </div>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>/*__CORE__*/</script>
+<script>/*__APP__*/</script>
+</body>
+</html>

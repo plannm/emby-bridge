@@ -1,0 +1,1275 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'">
+<meta name="description" content="在浏览器本地把 Emby / Jellyfin 播放器配置备份互相转换，支持 Hills、Yamby、LinPlayer、WWPlayer、CapyPlayer、AI Player、AfuseKt。纯离线，不联网，不登录服务器。">
+<title>Emby Bridge · 播放器配置互转</title>
+<style>:root {
+  --bg: #0e1015;
+  --bg-soft: #14171e;
+  --card: #191d26;
+  --card-2: #1f2430;
+  --line: #2b313e;
+  --line-soft: #232834;
+  --text: #e9ecf3;
+  --muted: #98a2b4;
+  --dim: #6f7889;
+  --accent: #7c8cff;
+  --accent-2: #a78bfa;
+  --ok: #4ade80;
+  --warn: #fbbf24;
+  --danger: #f87171;
+  --radius: 14px;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: radial-gradient(1200px 600px at 15% -10%, #1c2130 0%, transparent 60%), var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  font-size: 15px;
+  line-height: 1.55;
+  min-height: 100vh;
+}
+button, input, textarea, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+a { color: var(--accent); }
+.wrap { max-width: 1180px; margin: 0 auto; padding: 0 20px 80px; }
+
+/* header */
+header.top { padding: 34px 0 22px; }
+.brand { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.logo {
+  width: 42px; height: 42px; border-radius: 12px; flex: 0 0 auto;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  display: grid; place-items: center; box-shadow: 0 8px 24px rgba(124, 140, 255, .25);
+}
+h1 { font-size: 24px; margin: 0; letter-spacing: -.4px; }
+.sub { color: var(--muted); font-size: 13.5px; margin-top: 3px; }
+.badges { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+.badge {
+  display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px;
+  background: rgba(74, 222, 128, .08); border: 1px solid rgba(74, 222, 128, .25);
+  color: #9be8b7; border-radius: 999px; font-size: 12px; font-weight: 500;
+}
+.badge.blue { background: rgba(124, 140, 255, .08); border-color: rgba(124, 140, 255, .28); color: #b7c1ff; }
+.badge.amber { background: rgba(251, 191, 36, .07); border-color: rgba(251, 191, 36, .25); color: #f5d78a; }
+
+/* sections */
+section.panel {
+  background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 22px; margin-top: 18px;
+}
+.panel-head { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 18px; flex-wrap: wrap; }
+.step {
+  width: 26px; height: 26px; border-radius: 8px; flex: 0 0 auto;
+  background: rgba(124, 140, 255, .14); color: var(--accent);
+  display: grid; place-items: center; font-size: 13px; font-weight: 700;
+}
+.panel-title { font-size: 17px; font-weight: 650; margin: 0; }
+.panel-desc { color: var(--muted); font-size: 13px; margin: 2px 0 0; }
+.panel-head .spacer { flex: 1 1 auto; }
+
+/* dropzone */
+.drop {
+  border: 1.5px dashed #3b4354; border-radius: 12px; background: var(--bg-soft);
+  padding: 30px 20px; text-align: center; transition: .18s ease;
+}
+.drop.hover { border-color: var(--accent); background: rgba(124, 140, 255, .07); }
+.drop .big { font-size: 15px; font-weight: 600; }
+.drop .small { color: var(--muted); font-size: 12.5px; margin-top: 6px; }
+.drop .icon { font-size: 26px; display: block; margin-bottom: 8px; opacity: .8; }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  background: var(--card-2); border: 1px solid var(--line); color: var(--text);
+  padding: 8px 14px; border-radius: 9px; font-size: 13.5px; font-weight: 500;
+  transition: .15s ease; white-space: nowrap;
+}
+.btn:hover { border-color: #46506a; background: #262c3a; }
+.btn.primary { background: linear-gradient(135deg, var(--accent), var(--accent-2)); border-color: transparent; color: #0e1020; font-weight: 650; }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.ghost { background: transparent; }
+.btn.danger { color: var(--danger); border-color: rgba(248, 113, 113, .3); }
+.btn.sm { padding: 5px 10px; font-size: 12.5px; }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.drop .btn { margin-top: 14px; }
+input[type="file"] { display: none; }
+.filelist { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 8px; padding: 6px 10px;
+  background: var(--card-2); border: 1px solid var(--line); border-radius: 8px; font-size: 12.5px;
+}
+.chip b { color: var(--accent); font-weight: 600; }
+.chip span { color: var(--muted); }
+
+/* toolbar */
+.toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+.toolbar .spacer { flex: 1 1 auto; }
+.search {
+  background: var(--bg-soft); border: 1px solid var(--line); border-radius: 9px;
+  padding: 8px 12px; width: 190px; font-size: 13.5px; outline: none;
+}
+.search:focus { border-color: var(--accent); }
+.count { color: var(--muted); font-size: 12.5px; }
+
+/* server cards */
+.server {
+  background: var(--bg-soft); border: 1px solid var(--line-soft); border-radius: 11px;
+  margin-bottom: 10px; overflow: hidden;
+}
+.server.selected { border-color: rgba(124, 140, 255, .45); }
+.server-head { display: flex; align-items: center; gap: 10px; padding: 11px 13px; }
+.server-head input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--accent); flex: 0 0 auto; }
+.idx { color: var(--dim); font-size: 12px; min-width: 22px; font-family: var(--mono); }
+.sv-name { font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sv-url { color: var(--muted); font-size: 12.5px; font-family: var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sv-user { color: var(--dim); font-size: 12px; white-space: nowrap; }
+.tag {
+  font-size: 11px; padding: 2px 7px; border-radius: 6px; background: rgba(124, 140, 255, .12);
+  color: #b7c1ff; white-space: nowrap;
+}
+.server-head .grow { flex: 1 1 auto; min-width: 0; }
+.server-head .meta { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1 1 auto; }
+.server-body { border-top: 1px solid var(--line-soft); padding: 15px 13px; display: none; }
+.server.open .server-body { display: block; }
+.fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(215px, 1fr)); gap: 11px; }
+label.f { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+label.f > span { color: var(--muted); font-size: 11.5px; font-weight: 500; letter-spacing: .2px; }
+label.f input, label.f select, label.f textarea {
+  width: 100%; background: var(--card); border: 1px solid var(--line);
+  border-radius: 8px; padding: 8px 10px; font-size: 13.5px; outline: none;
+}
+label.f input:focus, label.f textarea:focus { border-color: var(--accent); }
+label.f input.mono { font-family: var(--mono); font-size: 12.5px; }
+.lines { margin-top: 15px; border-top: 1px dashed var(--line); padding-top: 13px; }
+.lines-title { font-size: 12.5px; color: var(--muted); margin-bottom: 9px; display: flex; align-items: center; gap: 10px; }
+.line-row { display: flex; gap: 8px; margin-bottom: 7px; align-items: center; }
+.line-row input { flex: 1 1 auto; min-width: 0; background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 7px 9px; font-size: 13px; outline: none; }
+.line-row input.nm { flex: 0 0 120px; }
+.line-row input:focus { border-color: var(--accent); }
+.line-row .rm { color: var(--danger); background: none; border: none; padding: 4px 7px; font-size: 17px; line-height: 1; }
+.empty { color: var(--muted); text-align: center; padding: 34px 12px; font-size: 13.5px; }
+
+/* export grid */
+.fmt-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(215px, 1fr)); gap: 11px; }
+.fmt {
+  text-align: left; background: var(--bg-soft); border: 1px solid var(--line);
+  border-radius: 11px; padding: 14px; transition: .15s ease; display: block; width: 100%;
+}
+.fmt:hover { border-color: var(--accent); background: rgba(124, 140, 255, .07); transform: translateY(-1px); }
+.fmt .t { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-weight: 650; font-size: 14px; }
+.fmt .ext { font-family: var(--mono); font-size: 11px; color: var(--accent); background: rgba(124, 140, 255, .1); padding: 2px 6px; border-radius: 5px; }
+.fmt .d { color: var(--muted); font-size: 12px; margin-top: 6px; line-height: 1.45; }
+.fmt .w { color: var(--warn); font-size: 11.5px; margin-top: 6px; }
+
+/* info blocks */
+.note {
+  background: rgba(124, 140, 255, .06); border: 1px solid rgba(124, 140, 255, .18);
+  border-radius: 10px; padding: 12px 14px; color: #c3caff; font-size: 12.8px; line-height: 1.65;
+}
+.note.warn { background: rgba(251, 191, 36, .06); border-color: rgba(251, 191, 36, .2); color: #f2d79b; }
+.note.gray { background: var(--bg-soft); border-color: var(--line); color: var(--muted); }
+.note b { color: var(--text); }
+details.faq { border-top: 1px solid var(--line-soft); padding: 12px 0; }
+details.faq:first-of-type { border-top: 0; }
+details.faq summary { cursor: pointer; font-size: 14px; font-weight: 550; }
+details.faq p { color: var(--muted); font-size: 13px; margin: 9px 0 0; line-height: 1.7; }
+code { font-family: var(--mono); background: #11141b; border: 1px solid var(--line); padding: 1px 5px; border-radius: 5px; font-size: 12px; }
+
+/* modal */
+.modal-mask {
+  position: fixed; inset: 0; background: rgba(5, 7, 12, .72); backdrop-filter: blur(4px);
+  display: none; align-items: center; justify-content: center; padding: 20px; z-index: 50;
+}
+.modal-mask.show { display: flex; }
+.modal {
+  background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+  width: min(680px, 100%); max-height: 86vh; overflow: auto; padding: 22px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, .5);
+}
+.modal h3 { margin: 0 0 6px; font-size: 17px; }
+.modal p { color: var(--muted); font-size: 13px; margin: 0 0 14px; }
+.modal textarea {
+  width: 100%; min-height: 210px; background: var(--bg-soft); border: 1px solid var(--line);
+  border-radius: 9px; padding: 11px; font-family: var(--mono); font-size: 12.5px; outline: none; resize: vertical;
+}
+.modal textarea:focus { border-color: var(--accent); }
+.modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+
+/* toast */
+#toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translate(-50%, 20px);
+  background: #252b39; border: 1px solid var(--line); color: var(--text);
+  padding: 10px 18px; border-radius: 10px; font-size: 13.5px; opacity: 0;
+  pointer-events: none; transition: .25s ease; z-index: 80; box-shadow: 0 12px 34px rgba(0,0,0,.4);
+  max-width: min(90vw, 560px); text-align: center;
+}
+#toast.show { opacity: 1; transform: translate(-50%, 0); }
+#toast.err { border-color: rgba(248, 113, 113, .5); color: #ffc9c9; }
+
+footer { color: var(--dim); font-size: 12px; text-align: center; padding: 30px 0 0; line-height: 1.8; }
+
+@media (max-width: 720px) {
+  .wrap { padding: 0 13px 60px; }
+  section.panel { padding: 16px; }
+  h1 { font-size: 20px; }
+  .server-head { flex-wrap: wrap; }
+  .server-head .meta { flex-basis: 100%; order: 3; }
+  .sv-user { display: none; }
+  .search { width: 100%; }
+  .toolbar .spacer { display: none; }
+  .line-row { flex-wrap: wrap; }
+  .line-row input.nm { flex: 1 1 100%; }
+  .fmt-grid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 430px) { .fmt-grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="brand">
+      <div class="logo" aria-hidden="true">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0e1020" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 7h11a3 3 0 0 1 0 6H9a3 3 0 0 0 0 6h11"/><circle cx="4" cy="7" r="1.6" fill="#0e1020"/><circle cx="20" cy="19" r="1.6" fill="#0e1020"/>
+        </svg>
+      </div>
+      <div>
+        <h1>Emby Bridge · 播放器配置互转</h1>
+        <div class="sub">把 Windows 版 Rodel Player 的「其它应用」备份，变成 Mac / 手机 / 网页都能处理的文件</div>
+      </div>
+    </div>
+    <div class="badges">
+      <span class="badge">✓ 纯浏览器本地运行</span>
+      <span class="badge blue">✓ 零网络请求（已禁用联网）</span>
+      <span class="badge">✓ 不会连接或登录任何 Emby 服务器</span>
+      <span class="badge amber">⚠ 备份含明文密码，请自行保管</span>
+    </div>
+  </header>
+
+  <section class="panel">
+    <div class="panel-head">
+      <span class="step">1</span>
+      <div><h2 class="panel-title">导入备份</h2><p class="panel-desc">拖入或选择播放器导出的配置文件，可一次选多个。同地址 + 同账号会自动合并，不会重复。</p></div>
+    </div>
+    <div class="drop" id="drop">
+      <span class="icon" aria-hidden="true">⇩</span>
+      <div class="big">把备份文件拖到这里</div>
+      <div class="small">支持 .json / .lpbak / .wwpcfg / .csv，也能直接粘贴地址清单</div>
+      <button class="btn primary" id="pickBtn">选择文件</button>
+      <input type="file" id="fileInput" multiple accept=".json,.lpbak,.wwpcfg,.csv,.txt,application/json,text/plain">
+    </div>
+    <div class="filelist" id="fileList"></div>
+    <div class="note gray" style="margin-top:14px">
+      文件只在当前页面内存中解析，<b>不会上传、不会缓存、不会写入 localStorage</b>；刷新页面即全部清空。页面本身也没有任何外部脚本、字体或统计代码。
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <span class="step">2</span>
+      <div><h2 class="panel-title">检查与编辑服务器</h2><p class="panel-desc">点「编辑」展开详细字段；用勾选框决定哪些服务器参与导出。</p></div>
+      <div class="spacer"></div>
+      <span class="count" id="count">共 0 台</span>
+    </div>
+    <div class="toolbar">
+      <button class="btn" id="addBtn">+ 添加一台</button>
+      <button class="btn" id="pasteBtn">批量粘贴 / CSV</button>
+      <button class="btn" id="dedupeBtn">去重</button>
+      <button class="btn" id="selectAll">全选 / 反选</button>
+      <button class="btn" id="expandAll">展开 / 收起</button>
+      <button class="btn" id="secretBtn">显示密码</button>
+      <div class="spacer"></div>
+      <input class="search" id="search" type="search" placeholder="搜索名称 / 地址 / 账号">
+      <button class="btn ghost danger" id="clearBtn">清空</button>
+    </div>
+    <div id="serverList"></div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <span class="step">3</span>
+      <div><h2 class="panel-title">导出为目标格式</h2><p class="panel-desc">点一下即在本地生成文件并下载，文件名与各播放器习惯保持一致。</p></div>
+    </div>
+    <div class="fmt-grid">
+      <button class="fmt" data-export="hills"><div class="t">Hills <span class="ext">.json</span></div><div class="d">macOS / iOS 常用播放器，加密配置</div></button>
+      <button class="fmt" data-export="yamby"><div class="t">Yamby / Tsukimi <span class="ext">.json</span></div><div class="d">通用 CommonConfig 加密格式</div></button>
+      <button class="fmt" data-export="linplayer"><div class="t">LinPlayer <span class="ext">.lpbak</span></div><div class="d">密钥随文件附带，兼容性好</div></button>
+      <button class="fmt" data-export="wwplayer"><div class="t">WWPlayer <span class="ext">.wwpcfg</span></div><div class="d">V1 便携配置交换格式</div></button>
+      <button class="fmt" data-export="capyplayer"><div class="t">CapyPlayer <span class="ext">.json</span></div><div class="d">加密数据库备份格式</div></button>
+      <button class="fmt" data-export="aiplayer"><div class="t">AI Player <span class="ext">.json</span></div><div class="d">V1 加密服务器配置</div></button>
+      <button class="fmt" data-export="afusekt"><div class="t">AfuseKt <span class="ext">.json</span></div><div class="d">明文配置</div><div class="w">⚠ 该格式不保存 User ID / Token</div></button>
+      <button class="fmt" data-export="bridge"><div class="t">通用中间格式 <span class="ext">.json</span></div><div class="d">明文、可手工编辑，适合长期保存与跨设备迁移</div></button>
+      <button class="fmt" data-export="csv"><div class="t">CSV 表格 <span class="ext">.csv</span></div><div class="d">用 Excel / 表格软件批量整理</div></button>
+    </div>
+    <div class="note" id="exportHint" style="margin-top:16px">将导出已勾选的 0 台服务器。</div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <span class="step">?</span>
+      <div><h2 class="panel-title">使用说明与注意事项</h2></div>
+    </div>
+    <details class="faq" open>
+      <summary>它到底做什么？安全吗？</summary>
+      <p>它只做一件事：把你已有的播放器备份文件<b>读进来</b>，转换成另一种播放器认识的备份文件<b>写出去</b>。全部加解密都在你的浏览器里完成，页面通过 CSP 把 <code>connect-src</code> 设为 <code>none</code>，从浏览器层面禁掉了 fetch / XHR / WebSocket 等一切外联，因此<b>绝不会去访问或登录你的 Emby 服务器</b>，也就不存在触发服务器风控、封号的问题。页面不引用任何外部 CDN 资源，可离线使用。</p>
+    </details>
+    <details class="faq">
+      <summary>典型用法：Windows 上导出 → Mac / 手机上导入</summary>
+      <p>① 在 Windows 版 Rodel Player 的「设置 → 备份与恢复 → 其它应用」里，任选一个应用点「导出配置」，得到一个备份文件。<br>
+         ② 把这个文件传到 Mac / 手机（AirDrop、微信文件传输、网盘均可），在本网页「导入备份」里打开。<br>
+         ③ 检查、修改、去重，然后点目标播放器对应的导出按钮，把下载下来的文件交给目标 App 的「导入配置」即可。<br>
+         也可以先导出「通用中间格式」长期保存；下次打开网页直接导入它，再转成任意播放器格式。</p>
+    </details>
+    <details class="faq">
+      <summary>批量添加支持哪些写法？</summary>
+      <p>点「批量粘贴 / CSV」，支持三种：<br>
+         · <b>CSV</b>：表头为 <code>name,type,url,username,password,userId,accessToken,icon,lines</code>（可只写其中几列），线路列用 <code>名称=地址|名称=地址</code> 表示；<br>
+         · <b>每行一台</b>：<code>名称 | https://地址 | 用户名 | 密码</code>，分隔符也可用逗号、分号或制表符；只写 URL 也可以；<br>
+         · <b>通用中间格式 JSON</b>：本工具自己导出的文件。</p>
+    </details>
+    <details class="faq">
+      <summary>各种格式有什么限制？</summary>
+      <p>7 种播放器格式均已在本地用真实导出文件做过互转往返验证。<b>AfuseKt</b> 的明文结构里没有 User ID / Access Token 字段，转到该格式会丢失这两项，导入后需要重新登录一次；<b>WWPlayer V1</b> 是可逆混淆而非强加密，官方也提示应把 <code>.wwpcfg</code> 当作凭据文件保管。导出的备份里包含账号、密码与令牌明文（或等价的可逆数据），请勿上传到公开仓库、网盘分享链接或陌生网页。</p>
+    </details>
+    <details class="faq">
+      <summary>部署到自己的域名 / GitHub Pages</summary>
+      <p><code>index.html</code> 是单文件，没有任何外部依赖：直接双击可用，或把仓库推到 GitHub 后在 Settings → Pages 选择主分支根目录即可；绑定自定义域名时加一条 CNAME 记录并在 Pages 里填写域名。建议开启 HTTPS（Web Crypto 在 HTTPS、localhost 和大多数浏览器的本地文件下可用）。页面不需要后端、不需要数据库、不需要 API Key。</p>
+    </details>
+    <div class="note warn" style="margin-top:16px">
+      <b>免责声明：</b>本工具仅用于迁移你本人有权使用的播放器配置。请不要用它处理他人的凭据，也不要把含密码的备份文件提交到公开仓库或发送给第三方。工具与 Rodel Player 及各播放器官方无关联。
+    </div>
+  </section>
+
+  <footer>Emby Bridge · 本地优先，零外联 · 所有格式编解码均在浏览器内完成</footer>
+</div>
+
+<div class="modal-mask" id="modal">
+  <div class="modal">
+    <h3>批量添加服务器</h3>
+    <p>粘贴 CSV、每行一台的地址清单，或本工具导出的通用中间格式 JSON。相同地址 + 账号会自动合并。</p>
+    <textarea id="pasteText" spellcheck="false" placeholder="示例：
+我的服务器 | https://emby.example.com:8096 | admin | password
+备用服务器 | https://emby2.example.com | admin | password"></textarea>
+    <div class="modal-actions">
+      <button class="btn" id="modalCancel">取消</button>
+      <button class="btn primary" id="modalOk">添加到列表</button>
+    </div>
+  </div>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>/*
+ * Emby Bridge - core format codecs
+ * ------------------------------------------------------------------
+ * Pure local format conversion for Emby/Jellyfin player configuration
+ * backups. No network calls, no telemetry, no server login.
+ *
+ * The codecs are compatible with the "other apps" interchange files
+ * produced by Rodel Player (Windows). All crypto happens locally with
+ * Web Crypto (or Node WebCrypto when running the self-test).
+ */
+(function (root, factory) {
+  var api = factory();
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  root.EmbyBridge = api;
+})(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+  'use strict';
+
+  var subtle = (globalThis.crypto && globalThis.crypto.subtle) ||
+    (typeof require === 'function' ? require('crypto').webcrypto.subtle : null);
+  var random = globalThis.crypto || (typeof require === 'function' ? require('crypto').webcrypto : null);
+  var enc = new TextEncoder();
+  var dec = new TextDecoder();
+
+  /* ------------------------------ primitives ------------------------------ */
+
+  function utf8(s) { return enc.encode(s == null ? '' : String(s)); }
+  function fromUtf8(b) { return dec.decode(b); }
+  function bytesToB64(b) {
+    var s = '';
+    for (var i = 0; i < b.length; i += 0x8000) s += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000));
+    return btoa(s);
+  }
+  function b64ToBytes(s) {
+    s = String(s).replace(/\s/g, '');
+    var bin = atob(s), out = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  }
+  function hexToBytes(h) {
+    var out = new Uint8Array(h.length / 2);
+    for (var i = 0; i < out.length; i++) out[i] = parseInt(h.substr(i * 2, 2), 16);
+    return out;
+  }
+  function randomBytes(n) { var b = new Uint8Array(n); random.getRandomValues(b); return b; }
+  function hexId(n) { var b = randomBytes(Math.ceil(n / 2)); return Array.from(b, function (x) { return ('0' + x.toString(16)).slice(-2); }).join('').slice(0, n); }
+  function uuid() {
+    if (random.randomUUID) return random.randomUUID();
+    var b = randomBytes(16); b[6] = (b[6] & 0x0f) | 0x40; b[8] = (b[8] & 0x3f) | 0x80;
+    var h = Array.from(b, function (x) { return ('0' + x.toString(16)).slice(-2); }).join('');
+    return h.slice(0, 8) + '-' + h.slice(8, 12) + '-' + h.slice(12, 16) + '-' + h.slice(16, 20) + '-' + h.slice(20);
+  }
+  function nowSec() { return Math.floor(Date.now() / 1000); }
+  function nowMs() { return Date.now(); }
+  function stamp() { var d = new Date(); return d.getFullYear() + ('0' + (d.getMonth() + 1)).slice(-2) + ('0' + d.getDate()).slice(-2); }
+  function p2(n) { return ('0' + n).slice(-2); }
+  function dotNetNow() {
+    var d = new Date(), off = -d.getTimezoneOffset(), sign = off >= 0 ? '+' : '-';
+    var a = Math.abs(off);
+    return d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()) + 'T' +
+      p2(d.getHours()) + ':' + p2(d.getMinutes()) + ':' + p2(d.getSeconds()) + '.' +
+      p2(d.getMilliseconds()) + '0000' + sign + p2(Math.floor(a / 60)) + ':' + p2(a % 60);
+  }
+
+  function requireSubtle() {
+    if (!subtle) throw new Error('当前环境不支持 Web Crypto。请用 HTTPS 页面、localhost，或新版 Chrome / Edge / Safari 打开本工具。');
+  }
+  async function sha256(data) { requireSubtle(); return new Uint8Array(await subtle.digest('SHA-256', data)); }
+  async function pbkdf2(password, salt, iterations, bytes) {
+    requireSubtle();
+    var key = await subtle.importKey('raw', utf8(password), 'PBKDF2', false, ['deriveBits']);
+    var bits = await subtle.deriveBits({ name: 'PBKDF2', salt: utf8(salt), iterations: iterations, hash: 'SHA-256' }, key, bytes * 8);
+    return new Uint8Array(bits);
+  }
+  async function cbcKey(raw) { return subtle.importKey('raw', raw, { name: 'AES-CBC' }, false, ['encrypt', 'decrypt']); }
+  async function cbcEncrypt(keyBytes, iv, plain) {
+    requireSubtle();
+    var k = await cbcKey(keyBytes);
+    return new Uint8Array(await subtle.encrypt({ name: 'AES-CBC', iv: iv }, k, plain));
+  }
+  async function cbcDecrypt(keyBytes, iv, cipher) {
+    requireSubtle();
+    var k = await cbcKey(keyBytes);
+    return new Uint8Array(await subtle.decrypt({ name: 'AES-CBC', iv: iv }, k, cipher));
+  }
+  async function gcmEncrypt(keyBytes, iv, plain) {
+    requireSubtle();
+    var k = await subtle.importKey('raw', keyBytes, { name: 'AES-GCM' }, false, ['encrypt']);
+    return new Uint8Array(await subtle.encrypt({ name: 'AES-GCM', iv: iv, tagLength: 128 }, k, plain));
+  }
+  async function gcmDecrypt(keyBytes, iv, cipherAndTag) {
+    requireSubtle();
+    var k = await subtle.importKey('raw', keyBytes, { name: 'AES-GCM' }, false, ['decrypt']);
+    return new Uint8Array(await subtle.decrypt({ name: 'AES-GCM', iv: iv, tagLength: 128 }, k, cipherAndTag));
+  }
+  async function cbcEncryptJson(keyBytes, iv, obj) { return bytesToB64(await cbcEncrypt(keyBytes, iv, utf8(JSON.stringify(obj)))); }
+
+  /* ------------------------------- constants ------------------------------ */
+
+  var YAMBY_KEY = utf8('makeeverymediaplayergreatagain!!');       // 32 bytes
+  var LIN_KEY = new Uint8Array(32);                                 // LinPlayer-common-config-key-v1!\0
+  (function () { var s = utf8('LinPlayer-common-config-key-v1!'); LIN_KEY.set(s.subarray(0, 32)); })();
+  var WW_KEY = utf8('WWPlayer portable config export v1');
+  var WW_MAGIC = 'WWPLAYER_CONFIG_EXPORT_V1';
+  var CAPY_PASSWORD = 'capyplayer_default_backup_key_2026';
+  var CAPY_SALT = 'capyplayer_backup_v1';
+  var HILLS_KEY = hexToBytes('9d2729bd3afe5536669610e25b3ef6b3a7fd1efe2a065187101b144951617bce');
+  var HILLS_IV = hexToBytes('bc322377137f312c2bff7a920aad959e');
+  var AI_IV = hexToBytes('5ae5916c2798047f905dd2c5272e0f41');
+
+  var META = {
+    afusekt: { label: 'AfuseKt', ext: 'json', note: '明文 JSON，直接可读' },
+    yamby: { label: 'Yamby / Tsukimi', ext: 'json', note: '通用配置格式，AES-256-CBC' },
+    linplayer: { label: 'LinPlayer', ext: 'lpbak', note: 'AES-256-CBC，密钥随文件附带' },
+    wwplayer: { label: 'WWPlayer', ext: 'wwpcfg', note: 'V1 可逆混淆，非强加密' },
+    capyplayer: { label: 'CapyPlayer', ext: 'json', note: 'PBKDF2 + AES-256-GCM' },
+    hills: { label: 'Hills', ext: 'json', note: 'AES-256-CBC' },
+    aiplayer: { label: 'AI Player', ext: 'json', note: 'V1 加密配置' },
+    bridge: { label: '通用中间格式', ext: 'json', note: '明文，可跨设备长期保存 / 手工编辑' },
+    csv: { label: 'CSV 表格', ext: 'csv', note: '明文，便于批量编辑（不含全部字段）' }
+  };
+  var FORMATS = ['afusekt', 'yamby', 'linplayer', 'wwplayer', 'capyplayer', 'hills', 'aiplayer'];
+
+  /* ---------------------------- unified model ----------------------------- */
+
+  function emptyServer(o) {
+    o = o || {};
+    return {
+      id: o.id || hexId(32),
+      name: o.name || '',
+      serverName: o.serverName || '',
+      type: o.type || 'emby',
+      url: o.url || '',
+      username: o.username || '',
+      password: o.password || '',
+      userId: o.userId || '',
+      accessToken: o.accessToken || '',
+      icon: o.icon || '',
+      lines: Array.isArray(o.lines) ? o.lines.map(function (l) { return { name: l.name || '', url: l.url || '', active: !!l.active }; }) : [],
+      activeLine: typeof o.activeLine === 'number' ? o.activeLine : 0,
+      remark: o.remark || '',
+      sortOrder: typeof o.sortOrder === 'number' ? o.sortOrder : 0,
+      _selected: o._selected,
+      _open: o._open,
+      raw: o.raw || {}
+    };
+  }
+  function normalize(servers) {
+    return (servers || []).map(function (s, i) {
+      var x = emptyServer(s);
+      x.url = String(x.url || '').trim().replace(/\/+$/, '');
+      if (x.sortOrder === 0) x.sortOrder = i;
+      // Always keep the primary address as the first line, so round-trips
+      // through LinPlayer / WWPlayer / Hills do not lose it.
+      if (x.url) {
+        var has = x.lines.some(function (l) { return l.url && l.url.replace(/\/+$/, '') === x.url; });
+        if (!has) x.lines.unshift({ name: '默认', url: x.url, active: true });
+      }
+      if (!x.lines.some(function (l) { return l.active; }) && x.lines.length) x.lines[0].active = true;
+      x.activeLine = Math.max(0, x.lines.findIndex(function (l) { return l.active; }));
+      return x;
+    });
+  }
+  function activeUrl(s) { return (s.lines[s.activeLine] && s.lines[s.activeLine].url) || s.url; }
+  function dedupe(servers) {
+    var seen = {}, out = [];
+    servers.forEach(function (s) {
+      var k = (s.url || '').toLowerCase() + '|' + (s.username || '').toLowerCase();
+      if (seen[k]) return;
+      seen[k] = 1; out.push(s);
+    });
+    return out;
+  }
+  function splitUrl(u) {
+    var o = { https: 0, host: '', port: 0, path: null };
+    try {
+      var p = new URL(u);
+      o.https = p.protocol === 'https:' ? 1 : 0;
+      o.host = p.hostname;
+      o.port = p.port ? parseInt(p.port, 10) : (o.https ? 443 : 80);
+      o.path = p.pathname && p.pathname !== '/' ? p.pathname : null;
+    } catch (e) {
+      var m = /^(https?):\/\/([^/:]+)(?::(\d+))?(\/.*)?$/.exec(u || '');
+      if (m) { o.https = m[1] === 'https' ? 1 : 0; o.host = m[2]; o.port = m[3] ? +m[3] : (o.https ? 443 : 80); o.path = m[4] && m[4] !== '/' ? m[4] : null; }
+    }
+    return o;
+  }
+  function joinUrl(https, host, port, path) {
+    if (!host) return '';
+    var s = (https ? 'https' : 'http') + '://' + host;
+    var p = port ? Number(port) : 0;
+    if (p && !((https && p === 443) || (!https && p === 80))) s += ':' + p;
+    if (path && path !== '/') s += (path.charAt(0) === '/' ? '' : '/') + path;
+    return s;
+  }
+  function linesFromRaw(arr, map) { return (arr || []).map(map).filter(function (l) { return l && l.url; }); }
+
+  /* -------------------------------- detect -------------------------------- */
+
+  function detect(text, filename) {
+    var t = String(text || '').replace(/^\uFEFF/, '').trim();
+    var o = null;
+    try { o = JSON.parse(t); } catch (e) { return null; }
+    var fn = (filename || '').toLowerCase();
+    if (Array.isArray(o) && o.length && ('originalAddress' in o[0] || 'nowAddress' in o[0])) return 'afusekt';
+    if (o && o.magic === WW_MAGIC) return 'wwplayer';
+    if (o && o.encrypted_data) return 'capyplayer';
+    if (o && o.format === 'emby-bridge') return 'bridge';
+    if (o && Array.isArray(o.configs) && o._key !== undefined) return fn.endsWith('.lpbak') ? 'linplayer' : 'yamby';
+    if (o && Array.isArray(o.configs)) return 'yamby';
+    if (o && o.version === 2 && typeof o.data === 'string' && 'iconPacks' in o) return 'hills';
+    if (o && typeof o.data === 'string' && Object.keys(o).length <= 2) return 'aiplayer';
+    if (fn.endsWith('.lpbak')) return 'linplayer';
+    if (fn.endsWith('.wwpcfg')) return 'wwplayer';
+    return null;
+  }
+
+  /* --------------------------------- parse -------------------------------- */
+
+  async function parse(text, format) {
+    var o = JSON.parse(String(text).replace(/^\uFEFF/, '').trim());
+    var servers = [];
+    var i, it, l, extra;
+    switch (format) {
+      case 'afusekt':
+        (Array.isArray(o) ? o : []).forEach(function (a) {
+          var s = emptyServer({
+            name: a.name, url: a.nowAddress || a.originalAddress, username: a.account,
+            password: a.password, type: a.sourceType || 'emby', icon: a.icon,
+            lines: linesFromRaw(a.lines, function (x) { return { name: x.name, url: x.address, active: !!x.isNow }; })
+          });
+          s.raw.afusekt = a; servers.push(s);
+        });
+        break;
+
+      case 'yamby':
+        for (i = 0; i < (o.configs || []).length; i++) {
+          it = JSON.parse(fromUtf8(await cbcDecrypt(YAMBY_KEY, YAMBY_KEY.subarray(0, 16), b64ToBytes(o.configs[i]))));
+          var auth = it.authorization || {};
+          servers.push(emptyServer({
+            name: it.name, url: it.url, username: auth.user_name, password: auth.password,
+            userId: auth.user_id, accessToken: auth.access_token, icon: it.icon, type: it.type || 'emby',
+            sortOrder: it.sort_order || 0,
+            lines: linesFromRaw(it.lines, function (x) { return { name: x.name, url: x.url }; })
+          }));
+          servers[servers.length - 1].raw.yamby = it;
+        }
+        break;
+
+      case 'linplayer':
+        var lk = o._key ? b64ToBytes(o._key) : LIN_KEY;
+        for (i = 0; i < (o.configs || []).length; i++) {
+          it = JSON.parse(fromUtf8(await cbcDecrypt(lk, lk.subarray(0, 16), b64ToBytes(o.configs[i]))));
+          var ext = it.linplayer || {};
+          servers.push(emptyServer({
+            name: ext.name || it.name, url: it.url, username: it.username,
+            password: ext.password, userId: it.user_id, accessToken: it.access_token,
+            icon: ext.icon_url, type: it.type || 'emby', remark: ext.remark || '',
+            lines: linesFromRaw(ext.lines, function (x) { return { name: x.name, url: x.url }; })
+          }));
+          servers[servers.length - 1].raw.linplayer = it;
+        }
+        break;
+
+      case 'wwplayer':
+        var ct = b64ToBytes(o.payload), nonceB = utf8(o.nonce), out = new Uint8Array(ct.length);
+        for (i = 0; i < ct.length; i++) {
+          var kb = WW_KEY[i % WW_KEY.length], n = i % 8;
+          var rot = ((kb << n) | (kb >> (8 - n))) & 0xff;
+          out[i] = ct[i] ^ rot ^ nonceB[i % nonceB.length];
+        }
+        var inner = JSON.parse(fromUtf8(out));
+        (inner.servers || []).forEach(function (w, idx) {
+          var main = (w.lines || []).find(function (x) { return x.id === w.activeLineId; }) || (w.lines || [])[0] || {};
+          servers.push(emptyServer({
+            id: w.id, name: w.name, url: main.url || (idx === 0 ? inner.embyServerUrl : ''),
+            username: w.username, password: w.password, userId: w.userId,
+            accessToken: w.accessToken, icon: typeof w.icon === 'string' && w.icon.length > 2 ? w.icon : '',
+            lines: linesFromRaw(w.lines, function (x) { return { name: x.name, url: x.url, active: x.id === w.activeLineId }; })
+          }));
+          servers[servers.length - 1].raw.wwplayer = w;
+        });
+        break;
+
+      case 'capyplayer':
+        var parts = String(o.encrypted_data).split(':');
+        var civ = b64ToBytes(parts[0]);
+        var ckey = await pbkdf2(CAPY_PASSWORD, CAPY_SALT, 10000, 32);
+        var cplain = JSON.parse(fromUtf8(await gcmDecrypt(ckey, civ, b64ToBytes(parts[1]))));
+        ((cplain.tables || {}).media_server_resources || []).forEach(function (r, idx) {
+          var routes = [];
+          try { routes = JSON.parse(r.backup_routes || '[]'); } catch (e) { /* ignore */ }
+          servers.push(emptyServer({
+            id: r.id, name: r.name, url: joinUrl(r.https, r.host, r.port, r.path),
+            username: r.username, password: r.password, userId: r.user_id,
+            accessToken: r.token, icon: r.server_logo_image_url, type: r.type || 'emby',
+            remark: r.remark || '', sortOrder: typeof r.sort_order === 'number' ? r.sort_order : idx,
+            lines: linesFromRaw(routes, function (x) { return { name: x.name, url: joinUrl(x.https, x.host, x.port, x.path), active: !!x.isUse }; })
+          }));
+          servers[servers.length - 1].raw.capyplayer = r;
+        });
+        break;
+
+      case 'hills':
+        var hplain = fromUtf8(await cbcDecrypt(HILLS_KEY, HILLS_IV, b64ToBytes(o.data)));
+        var hjson;
+        try { hjson = JSON.parse(hplain); } catch (e) { hjson = JSON.parse(hplain + '}'); }
+        (hjson.data || []).forEach(function (h, idx) {
+          var auth = {};
+          try { auth = JSON.parse(h.authenticateJson || '{}'); } catch (e) { /* ignore */ }
+          servers.push(emptyServer({
+            name: h.displyName || h.serverName, serverName: h.serverName, url: h.serverUrl,
+            username: h.username, password: h.password, userId: (auth.User || {}).Id,
+            accessToken: auth.AccessToken, icon: h.iconUrl, remark: h.remark || '',
+            type: h.isJellyfin ? 'jellyfin' : 'emby', sortOrder: h.orderIndex || idx,
+            lines: linesFromRaw(h.serverRoutingList, function (x) { return { name: x.name, url: x.url }; })
+          }));
+          servers[servers.length - 1].raw.hills = h;
+        });
+        break;
+
+      case 'aiplayer':
+        var akey = await sha256(utf8('AIPlayer'));
+        var aplain = JSON.parse(fromUtf8(await cbcDecrypt(akey, AI_IV, b64ToBytes(o.data))));
+        (aplain.servers || []).forEach(function (a, idx) {
+          servers.push(emptyServer({
+            id: a.id, name: a.name, serverName: a.serverName, url: a.preferredLineUrl || ((a.lines || [])[0] || {}).url,
+            username: a.username, password: a.encryptedPassword, userId: a.lastKnownUserId,
+            accessToken: a.encryptedToken, icon: a.iconUrl, type: a.provider || 'emby',
+            sortOrder: typeof a.sortOrder === 'number' ? a.sortOrder : idx,
+            lines: linesFromRaw(a.lines, function (x) { return { name: x.name, url: x.url, active: !!x.isMain }; })
+          }));
+          servers[servers.length - 1].raw.aiplayer = a;
+        });
+        break;
+
+      case 'bridge':
+        (o.servers || []).forEach(function (b) { servers.push(emptyServer(b)); });
+        break;
+
+      default: throw new Error('未知格式: ' + format);
+    }
+    return { servers: normalize(servers), meta: { format: format, source: o } };
+  }
+
+  /* --------------------------------- build -------------------------------- */
+
+  function lineUrl(s, fallback) { return activeUrl(s) || fallback || ''; }
+  function baseRaw(s, fmt) { return Object.assign({}, s.raw && s.raw[fmt] ? s.raw[fmt] : {}); }
+
+  function buildAfusekt(servers) {
+    return servers.map(function (s) {
+      var o = baseRaw(s, 'afusekt');
+      var u = lineUrl(s);
+      Object.assign(o, {
+        originalAddress: s.url || u, nowAddress: u, account: s.username || '', password: s.password || '',
+        sourceType: s.type || 'emby', icon: s.icon || '', name: s.name || '',
+        lines: s.lines.filter(function (l) { return l.url && l.url !== u; })
+          .map(function (l) { return { address: l.url, isNow: false, name: l.name || '线路' }; })
+      });
+      return o;
+    });
+  }
+
+  async function buildYamby(servers) {
+    var configs = [];
+    for (var i = 0; i < servers.length; i++) {
+      var s = servers[i], o = baseRaw(s, 'yamby');
+      var auth = Object.assign({}, o.authorization || {});
+      Object.assign(auth, { user_name: s.username || '', password: s.password || '', user_id: s.userId || '', access_token: s.accessToken || '', data: null });
+      Object.assign(o, {
+        type: s.type || 'emby', id: o.id || hexId(32), name: s.name || '', url: s.url || lineUrl(s),
+        authorization: auth, sort_order: typeof s.sortOrder === 'number' ? s.sortOrder : i,
+        create_time: o.create_time || nowSec(), last_update_time: nowSec(),
+        last_play_time: o.last_play_time || null, last_open_time: o.last_open_time || null,
+        icon: s.icon || null,
+        lines: s.lines.filter(function (l) { return l.url; }).map(function (l) { return { url: l.url, name: l.name || '线路', additional_data: null }; }),
+        options: o.options || null
+      });
+      configs.push(await cbcEncryptJson(YAMBY_KEY, YAMBY_KEY.subarray(0, 16), o));
+    }
+    return {
+      from: 'RodelPlayer', version: '1.0', export_time: nowSec(),
+      configs: configs, icon_packages: {}, settings: {}, additional_data: {}, _key: null
+    };
+  }
+
+  async function buildLinplayer(servers) {
+    var configs = [];
+    for (var i = 0; i < servers.length; i++) {
+      var s = servers[i], o = baseRaw(s, 'linplayer');
+      var ext = Object.assign({}, o.linplayer || {});
+      ext.name = s.name || '';
+      ext.remark = s.remark || null;
+      ext.icon_url = s.icon || null;
+      ext.password = s.password || '';
+      ext.lines = s.lines.filter(function (l) { return l.url; }).map(function (l, j) {
+        return { id: (o.linplayer && o.linplayer.lines && o.linplayer.lines[j] && o.linplayer.lines[j].id) || hexId(32), name: l.name || '线路', url: l.url, remark: null };
+      });
+      ext.active_line = s.activeLine || 0;
+      ext.allow_insecure_tls = false;
+      ext.source_kind = s.type || 'emby';
+      ext.source = {};
+      Object.assign(o, {
+        type: s.type || 'emby', id: s.url || lineUrl(s), name: s.username || s.name || '',
+        url: s.url || lineUrl(s), username: s.username || '', user_id: s.userId || '',
+        access_token: s.accessToken || '', linplayer: ext
+      });
+      configs.push(await cbcEncryptJson(LIN_KEY, LIN_KEY.subarray(0, 16), o));
+    }
+    return {
+      from: 'RodelPlayer', version: '1.0', export_time: nowSec(), configs: configs,
+      linplayer_settings: null, _key: bytesToB64(LIN_KEY)
+    };
+  }
+
+  function wwTransform(bytes, nonceStr) {
+    var n = utf8(nonceStr), out = new Uint8Array(bytes.length);
+    for (var i = 0; i < bytes.length; i++) {
+      var kb = WW_KEY[i % WW_KEY.length], r = i % 8;
+      out[i] = bytes[i] ^ (((kb << r) | (kb >> (8 - r))) & 0xff) ^ n[i % n.length];
+    }
+    return out;
+  }
+
+  function buildWwplayer(servers) {
+    var list = servers.map(function (s, i) {
+      var o = baseRaw(s, 'wwplayer');
+      var lines = s.lines.filter(function (l) { return l.url; }).map(function (l, j) {
+        return { id: (o.lines && o.lines[j] && o.lines[j].id) || hexId(37), name: l.name || '线路', url: l.url };
+      });
+      if (!lines.length) lines = [{ id: hexId(37), name: '默认', url: s.url }];
+      var activeLineId = (lines[s.activeLine] || lines[0]).id;
+      Object.assign(o, {
+        id: o.id || hexId(39), name: s.name || '', icon: s.icon || 'w',
+        username: s.username || '', userId: s.userId || '', accessToken: s.accessToken || '',
+        password: s.password || '', useSystemProxy: o.useSystemProxy !== undefined ? o.useSystemProxy : true,
+        activeLineId: activeLineId, lines: lines
+      });
+      return o;
+    });
+    var first = servers[0] || {};
+    var inner = { activeServerId: list.length ? list[0].id : '', servers: list };
+    if (first.url) {
+      inner.embyServerUrl = first.url;
+      inner.embyUsername = first.username || '';
+      inner.embyUserId = first.userId || '';
+      inner.embyAccessToken = first.accessToken || '';
+    }
+    var nonce = uuid();
+    var payload = bytesToB64(wwTransform(utf8(JSON.stringify(inner)), nonce));
+    return { magic: WW_MAGIC, nonce: nonce, payload: payload };
+  }
+
+  async function buildCapyplayer(servers) {
+    var rows = servers.map(function (s, i) {
+      var o = baseRaw(s, 'capyplayer');
+      var u = splitUrl(s.url || lineUrl(s));
+      var routes = s.lines.filter(function (l) { return l.url && l.url !== s.url; }).map(function (l) {
+        var p = splitUrl(l.url);
+        return { name: l.name || '线路', host: p.host, port: p.port, https: !!p.https, path: p.path || '/', isUse: false, isProxy: false };
+      });
+      Object.assign(o, {
+        id: o.id || uuid(), name: s.name || '', type: s.type || 'emby', resource_type: 'media_server',
+        created_at: o.created_at || nowMs(), last_accessed: o.last_accessed || null,
+        host: u.host, port: u.port, path: u.path, username: s.username || '', password: s.password || '',
+        token: s.accessToken || '', https: u.https, user_id: s.userId || '',
+        backup_routes: routes.length ? JSON.stringify(routes) : (o.backup_routes || '[]'),
+        server_logo_image_url: s.icon || null, sort_order: typeof s.sortOrder === 'number' ? s.sortOrder : i,
+        remark: s.remark || null, is_hidden: o.is_hidden || 0,
+        show_carousel: o.show_carousel === undefined ? 1 : o.show_carousel,
+        show_resource_aggregation: o.show_resource_aggregation || 0, disable_aggregation: o.disable_aggregation || 0,
+        use_strm_direct_link: o.use_strm_direct_link || 0, section_order: o.section_order || null,
+        section_configs: o.section_configs || null, carousel_excluded_genres: o.carousel_excluded_genres || null
+      });
+      return o;
+    });
+    var inner = { tables: { media_server_resources: rows, media_item_settings: [], icon_packs: [], icon_items: [] }, preferences: {} };
+    var iv = randomBytes(16);
+    var key = await pbkdf2(CAPY_PASSWORD, CAPY_SALT, 10000, 32);
+    var ct = await gcmEncrypt(key, iv, utf8(JSON.stringify(inner)));
+    return {
+      version: '1.0', created_at: nowMs(), app_version: '1.0.0.0', database_version: 5,
+      device_name: 'Emby Bridge', encrypted_data: bytesToB64(iv) + ':' + bytesToB64(ct)
+    };
+  }
+
+  async function buildHills(servers) {
+    var data = servers.map(function (s, i) {
+      var o = baseRaw(s, 'hills');
+      var auth = { User: { Name: s.username || '', Id: s.userId || '', PrimaryImageTag: null }, AccessToken: s.accessToken || '' };
+      Object.assign(o, {
+        displyName: s.name || '', serverName: s.serverName || s.name || '', serverUrl: s.url || lineUrl(s),
+        username: s.username || '', password: s.password || '', authenticateJson: JSON.stringify(auth),
+        orderIndex: typeof s.sortOrder === 'number' ? s.sortOrder : i, hideUsername: o.hideUsername || false,
+        iconUrl: s.icon || '', hideLibraryList: o.hideLibraryList || [], libraryOrderIndexList: o.libraryOrderIndexList || [],
+        avatarTag: o.avatarTag || '', viewSortList: o.viewSortList || [], viewFilterList: o.viewFilterList || [],
+        selectedServerRoutingId: o.selectedServerRoutingId || '',
+        serverRoutingList: s.lines.filter(function (l) { return l.url && l.url !== s.url; }).map(function (l) {
+          return { id: hexId(36), url: l.url, name: l.name || '线路' };
+        }),
+        hideFederated: o.hideFederated || false, isJellyfin: s.type === 'jellyfin', lastWatchedDate: o.lastWatchedDate || null,
+        mainRoutingName: o.mainRoutingName || '', isActive: i === 0, isPrivate: o.isPrivate || false,
+        remark: s.remark || '', viewCoverTypeList: o.viewCoverTypeList || [], strmDirectLinkPlay: o.strmDirectLinkPlay || false,
+        enableFailover: o.enableFailover || false
+      });
+      return o;
+    });
+    // Rodel / Hills write the inner document without its final closing brace
+    // (a quirk of the original codec). Reproduce that byte-for-byte so the
+    // generated backup is accepted by the same importers. parse() tolerates
+    // both variants.
+    var innerText = JSON.stringify({ data: data }).replace(/\}$/, '');
+    var cipher = await cbcEncrypt(HILLS_KEY, HILLS_IV, utf8(innerText));
+    return { version: 2, data: bytesToB64(cipher), settings: null, iconPacks: null, customIcons: null };
+  }
+
+  async function buildAiplayer(servers) {
+    var akey = await sha256(utf8('AIPlayer'));
+    var list = servers.map(function (s, i) {
+      var o = baseRaw(s, 'aiplayer');
+      var lines = s.lines.filter(function (l) { return l.url; }).map(function (l, j) {
+        return { name: l.name || '线路', url: l.url, isMain: j === (s.activeLine || 0) };
+      });
+      if (!lines.some(function (l) { return l.isMain; }) && lines.length) lines[0].isMain = true;
+      Object.assign(o, {
+        id: o.id || hexId(16), provider: s.type || 'emby', name: s.name || '', username: s.username || '',
+        lastKnownUserId: s.userId || '', serverName: s.serverName || null,
+        encryptedToken: s.accessToken || '', rememberPassword: true, encryptedPassword: s.password || '',
+        lines: lines, preferredLineUrl: lineUrl(s), iconUrl: s.icon || null,
+        sortOrder: typeof s.sortOrder === 'number' ? s.sortOrder : i, useProxy: o.useProxy || false
+      });
+      return o;
+    });
+    var inner = { version: 1, exportedAt: dotNetNow(), servers: list };
+    var cipher = await cbcEncrypt(akey, AI_IV, utf8(JSON.stringify(inner)));
+    return { data: bytesToB64(cipher) };
+  }
+
+  function buildBridge(servers) {
+    return {
+      format: 'emby-bridge', version: 1, exportedAt: new Date().toISOString(),
+      servers: servers.map(function (s) {
+        var o = {};
+        ['id', 'name', 'serverName', 'type', 'url', 'username', 'password', 'userId', 'accessToken', 'icon', 'lines', 'activeLine', 'remark', 'sortOrder'].forEach(function (k) { o[k] = s[k]; });
+        return o;
+      })
+    };
+  }
+
+  async function build(servers, format, options) {
+    options = options || {};
+    var list = normalize(servers || []);
+    if (options.selectedOnly) list = list.filter(function (s) { return s._selected !== false; });
+    var obj;
+    switch (format) {
+      case 'afusekt': obj = buildAfusekt(list); break;
+      case 'yamby': obj = await buildYamby(list); break;
+      case 'linplayer': obj = await buildLinplayer(list); break;
+      case 'wwplayer': obj = buildWwplayer(list); break;
+      case 'capyplayer': obj = await buildCapyplayer(list); break;
+      case 'hills': obj = await buildHills(list); break;
+      case 'aiplayer': obj = await buildAiplayer(list); break;
+      case 'bridge': obj = buildBridge(list); break;
+      case 'csv': return { text: toCsv(list), filename: 'emby-servers-' + stamp() + '.csv', mime: 'text/csv;charset=utf-8' };
+      default: throw new Error('未知格式: ' + format);
+    }
+    var pretty = format === 'wwplayer' || format === 'bridge' ? JSON.stringify(obj, null, 2) : JSON.stringify(obj);
+    return {
+      text: pretty,
+      filename: 'rodel-' + format + '-' + stamp() + '.' + META[format].ext,
+      mime: 'application/json;charset=utf-8'
+    };
+  }
+
+  /* ---------------------------------- CSV --------------------------------- */
+
+  function csvCell(v) {
+    v = v == null ? '' : String(v);
+    return /[",\n\r]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+  }
+  function toCsv(servers) {
+    var head = ['name', 'type', 'url', 'username', 'password', 'userId', 'accessToken', 'icon', 'lines'];
+    var rows = [head.join(',')];
+    (servers || []).forEach(function (s) {
+      rows.push([
+        csvCell(s.name), csvCell(s.type), csvCell(s.url), csvCell(s.username), csvCell(s.password),
+        csvCell(s.userId), csvCell(s.accessToken), csvCell(s.icon),
+        csvCell((s.lines || []).map(function (l) { return l.name + '=' + l.url; }).join('|'))
+      ].join(','));
+    });
+    return '\uFEFF' + rows.join('\r\n');
+  }
+  function parseCsvLine(line) {
+    var out = [], cur = '', quoted = false;
+    for (var i = 0; i < line.length; i++) {
+      var ch = line[i];
+      if (quoted) {
+        if (ch === '"' && line[i + 1] === '"') { cur += '"'; i++; }
+        else if (ch === '"') quoted = false;
+        else cur += ch;
+      } else if (ch === '"') quoted = true;
+      else if (ch === ',') { out.push(cur); cur = ''; }
+      else cur += ch;
+    }
+    out.push(cur); return out;
+  }
+  function parseCsv(text) {
+    var lines = String(text).replace(/^\uFEFF/, '').split(/\r?\n/).filter(function (l) { return l.trim(); });
+    if (!lines.length) return [];
+    var head = parseCsvLine(lines[0]).map(function (h) { return h.trim().toLowerCase(); });
+    var map = { name: 'name', 名称: 'name', type: 'type', 类型: 'type', url: 'url', 地址: 'url', address: 'url', username: 'username', 用户名: 'username', account: 'username', password: 'password', 密码: 'password', userid: 'userId', user_id: 'userId', accesstoken: 'accessToken', access_token: 'accessToken', token: 'accessToken', icon: 'icon', 图标: 'icon', lines: 'lines', 线路: 'lines' };
+    return lines.slice(1).map(function (line) {
+      var cells = parseCsvLine(line), s = emptyServer();
+      cells.forEach(function (v, i) {
+        var key = map[head[i]] || head[i];
+        if (key === 'lines') {
+          s.lines = String(v).split('|').filter(Boolean).map(function (p) {
+            var k = p.indexOf('='); return k > 0 ? { name: p.slice(0, k), url: p.slice(k + 1), active: false } : { name: '线路', url: p, active: false };
+          });
+        } else if (s.hasOwnProperty(key) && key !== 'lines' && key !== 'raw') s[key] = v;
+      });
+      return s;
+    }).filter(function (s) { return s.url || s.name || s.username; });
+  }
+  function parseQuickText(text) {
+    // One server per line: name | url | username | password  (or just a URL)
+    var out = [];
+    String(text || '').split(/\r?\n/).forEach(function (line) {
+      line = line.trim(); if (!line || line.charAt(0) === '#') return;
+      var parts = line.split(/\s*[|,;\t]\s*/);
+      var url = parts.find(function (p) { return /^https?:\/\//i.test(p); });
+      if (!url) return;
+      var others = parts.filter(function (p) { return p !== url; });
+      out.push(emptyServer({
+        url: url, name: others[0] || '', username: others[1] || '', password: others[2] || '',
+        lines: [{ name: '默认', url: url, active: true }]
+      }));
+    });
+    return out;
+  }
+
+  return {
+    META: META, FORMATS: FORMATS,
+    detect: detect, parse: parse, build: build,
+    normalize: normalize, dedupe: dedupe, emptyServer: emptyServer,
+    toCsv: toCsv, parseCsv: parseCsv, parseQuickText: parseQuickText,
+    _internal: { cbcEncrypt: cbcEncrypt, cbcDecrypt: cbcDecrypt, gcmEncrypt: gcmEncrypt, gcmDecrypt: gcmDecrypt, pbkdf2: pbkdf2, sha256: sha256, bytesToB64: bytesToB64, b64ToBytes: b64ToBytes }
+  };
+});
+</script>
+<script>/* Emby Bridge - UI controller. No network access, no storage. */
+(function () {
+  'use strict';
+  var B = globalThis.EmbyBridge;
+  var $ = function (s) { return document.querySelector(s); };
+  var state = { servers: [], files: [], filter: '', showSecrets: false };
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  var toastTimer;
+  function toast(msg, isErr) {
+    var t = $('#toast');
+    t.textContent = msg; t.className = 'show' + (isErr ? ' err' : '');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.className = ''; }, 3600);
+  }
+  function fmtCount() {
+    var n = state.servers.length, sel = state.servers.filter(function (s) { return s._selected !== false; }).length;
+    $('#count').textContent = '共 ' + n + ' 台 · 已选 ' + sel + ' 台';
+    $('#exportHint').textContent = '将导出已勾选的 ' + sel + ' 台服务器（共 ' + n + ' 台）。密码与令牌会原样写入备份文件，请妥善保管。';
+  }
+
+  /* ------------------------------ merging ------------------------------ */
+  function fill(a, b) {
+    ['name', 'serverName', 'url', 'username', 'password', 'userId', 'accessToken', 'icon', 'remark'].forEach(function (k) {
+      if (!a[k] && b[k]) a[k] = b[k];
+    });
+    if ((b.lines || []).length > (a.lines || []).length) a.lines = b.lines;
+    Object.keys(b.raw || {}).forEach(function (f) { if (!a.raw[f]) a.raw[f] = b.raw[f]; });
+  }
+  function mergeServers(incoming) {
+    var index = {};
+    state.servers.forEach(function (s) { index[(s.url || '').toLowerCase() + '|' + (s.username || '').toLowerCase()] = s; });
+    var added = 0, merged = 0;
+    incoming.forEach(function (s) {
+      var key = (s.url || '').toLowerCase() + '|' + (s.username || '').toLowerCase();
+      if (index[key]) { fill(index[key], s); merged++; }
+      else { s._selected = true; s._open = false; state.servers.push(s); index[key] = s; added++; }
+    });
+    state.servers = B.normalize(state.servers);
+    return { added: added, merged: merged };
+  }
+
+  /* ------------------------------- render ------------------------------- */
+  function field(i, key, label, val, opts) {
+    opts = opts || {};
+    var type = opts.secret && !state.showSecrets ? 'password' : 'text';
+    var cls = opts.mono ? ' class="mono"' : '';
+    return '<label class="f"><span>' + label + '</span><input type="' + type + '"' + cls +
+      ' data-i="' + i + '" data-field="' + key + '" value="' + esc(val) + '"' +
+      (opts.placeholder ? ' placeholder="' + esc(opts.placeholder) + '"' : '') + '></label>';
+  }
+  function lineRow(i, j, l) {
+    return '<div class="line-row">' +
+      '<input class="nm" data-i="' + i + '" data-li="' + j + '" data-lf="name" value="' + esc(l.name) + '" placeholder="线路名">' +
+      '<input data-i="' + i + '" data-li="' + j + '" data-lf="url" value="' + esc(l.url) + '" placeholder="https://...">' +
+      '<button class="rm" data-act="rmline" data-i="' + i + '" data-li="' + j + '" title="删除线路">×</button></div>';
+  }
+  function serverHtml(s, i) {
+    var open = !!s._open, sel = s._selected !== false;
+    var h = '<div class="server' + (open ? ' open' : '') + (sel ? ' selected' : '') + '" data-card="' + i + '">';
+    h += '<div class="server-head">' +
+      '<input type="checkbox" data-act="sel" data-i="' + i + '"' + (sel ? ' checked' : '') + ' title="参与导出">' +
+      '<span class="idx">' + (i + 1) + '</span>' +
+      '<div class="meta"><span class="sv-name">' + esc(s.name || '未命名服务器') + '</span>' +
+      '<span class="sv-url">' + esc(s.url || '') + '</span>' +
+      '<span class="sv-user">' + esc(s.username || '') + '</span>' +
+      '<span class="tag">' + (s.lines.length || 0) + ' 线路</span></div>' +
+      '<button class="btn sm ghost" data-act="toggle" data-i="' + i + '">' + (open ? '收起' : '编辑') + '</button>' +
+      '<button class="btn sm ghost danger" data-act="del" data-i="' + i + '" title="删除">删除</button></div>';
+    h += '<div class="server-body"><div class="fields">' +
+      field(i, 'name', '显示名称', s.name) +
+      '<label class="f"><span>服务器类型</span><select data-i="' + i + '" data-field="type">' +
+      '<option value="emby"' + (s.type === 'emby' ? ' selected' : '') + '>Emby</option>' +
+      '<option value="jellyfin"' + (s.type === 'jellyfin' ? ' selected' : '') + '>Jellyfin</option></select></label>' +
+      field(i, 'url', '主地址', s.url, { mono: true, placeholder: 'https://server:8096' }) +
+      field(i, 'serverName', '服务器名（部分播放器用）', s.serverName) +
+      field(i, 'username', '用户名', s.username) +
+      field(i, 'password', '密码', s.password, { secret: true }) +
+      field(i, 'userId', 'User ID', s.userId, { secret: true, mono: true }) +
+      field(i, 'accessToken', 'Access Token', s.accessToken, { secret: true, mono: true }) +
+      field(i, 'icon', '图标 URL', s.icon, { mono: true }) +
+      field(i, 'remark', '备注', s.remark) +
+      '</div>';
+    h += '<div class="lines"><div class="lines-title">线路 / 备用地址' +
+      '<button class="btn sm ghost" data-act="addline" data-i="' + i + '">+ 添加线路</button>' +
+      '<span style="color:var(--dim);font-size:11.5px">第一条为默认线路</span></div>' +
+      (s.lines.map(function (l, j) { return lineRow(i, j, l); }).join('') || '<div class="empty" style="padding:8px">暂无线路</div>') +
+      '</div></div></div>';
+    return h;
+  }
+  function render() {
+    var q = state.filter.trim().toLowerCase();
+    var list = state.servers.map(function (s, i) { return { s: s, i: i }; }).filter(function (x) {
+      if (!q) return true;
+      return [x.s.name, x.s.url, x.s.username, x.s.serverName].join(' ').toLowerCase().indexOf(q) >= 0;
+    });
+    $('#serverList').innerHTML = list.length
+      ? list.map(function (x) { return serverHtml(x.s, x.i); }).join('')
+      : '<div class="empty">' + (state.servers.length ? '没有匹配的服务器' : '还没有服务器。先导入一个播放器备份，或用「批量添加」粘贴地址。') + '</div>';
+    fmtCount();
+    $('#fileList').innerHTML = state.files.map(function (f) {
+      return '<span class="chip"><b>' + esc(B.META[f.format] ? B.META[f.format].label : f.format) + '</b><span>' + esc(f.name) + ' · ' + f.count + ' 台</span></span>';
+    }).join('');
+  }
+
+  /* ------------------------------- import ------------------------------- */
+  async function importText(text, name) {
+    var fmt = B.detect(text, name), servers = [];
+    if (!fmt && (/\.csv$/i.test(name) || /^[\s\uFEFF]*(name|名称|url|地址)\s*,/i.test(text))) {
+      servers = B.parseCsv(text); fmt = 'CSV';
+    } else if (!fmt && /^\s*\{/.test(text)) {
+      try {
+        var o = JSON.parse(text);
+        if (o && o.format === 'emby-bridge') { servers = (await B.parse(text, 'bridge')).servers; fmt = '通用中间格式'; }
+      } catch (e) { /* fall through */ }
+    }
+    if (!fmt) {
+      var quick = B.parseQuickText(text);
+      if (quick.length) { servers = quick; fmt = '文本'; }
+    }
+    if (fmt && B.FORMATS.indexOf(fmt) >= 0) servers = (await B.parse(text, fmt)).servers;
+    if (!servers.length) throw new Error('无法识别：' + name + '（支持的格式见页面下方）');
+    var r = mergeServers(servers);
+    state.files.push({ name: name, format: fmt, count: servers.length });
+    return r;
+  }
+  async function handleFiles(files) {
+    var added = 0, merged = 0, errors = [];
+    for (var i = 0; i < files.length; i++) {
+      try {
+        var text = await files[i].text();
+        var r = await importText(text, files[i].name);
+        added += r.added; merged += r.merged;
+      } catch (e) { errors.push(e.message); }
+    }
+    render();
+    if (errors.length) toast(errors.join(' / '), true);
+    else toast('导入完成：新增 ' + added + ' 台，合并 ' + merged + ' 台');
+  }
+
+  /* ------------------------------- export ------------------------------- */
+  async function exportAs(fmt) {
+    var selected = state.servers.filter(function (s) { return s._selected !== false; });
+    if (!selected.length) { toast('请至少勾选一台服务器', true); return; }
+    try {
+      var out = await B.build(selected, fmt);
+      var blob = new Blob([out.text], { type: out.mime });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url; a.download = out.filename; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+      toast('已生成 ' + out.filename + '（' + selected.length + ' 台）');
+    } catch (e) { toast('导出失败：' + e.message, true); }
+  }
+
+  /* -------------------------------- events ------------------------------- */
+  function bind() {
+    var drop = $('#drop'), input = $('#fileInput');
+    drop.addEventListener('click', function (e) { if (e.target.tagName !== 'BUTTON') input.click(); });
+    $('#pickBtn').addEventListener('click', function (e) { e.stopPropagation(); input.click(); });
+    input.addEventListener('change', function () { if (input.files.length) handleFiles(input.files); input.value = ''; });
+    ['dragenter', 'dragover'].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add('hover'); }); });
+    ['dragleave', 'drop'].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove('hover'); }); });
+    drop.addEventListener('drop', function (e) { if (e.dataTransfer.files.length) handleFiles(e.dataTransfer.files); });
+
+    $('#search').addEventListener('input', function (e) { state.filter = e.target.value; render(); });
+    $('#addBtn').addEventListener('click', function () {
+      var s = B.emptyServer({ name: '新服务器', url: '', lines: [] });
+      s._selected = true; s._open = true;
+      state.servers.push(s); render();
+      setTimeout(function () { var el = document.querySelector('[data-card="' + (state.servers.length - 1) + '"] input'); if (el) el.focus(); }, 30);
+    });
+    $('#pasteBtn').addEventListener('click', function () { $('#modal').classList.add('show'); $('#pasteText').focus(); });
+    $('#modalCancel').addEventListener('click', function () { $('#modal').classList.remove('show'); });
+    $('#modal').addEventListener('click', function (e) { if (e.target.id === 'modal') $('#modal').classList.remove('show'); });
+    $('#modalOk').addEventListener('click', async function () {
+      var text = $('#pasteText').value;
+      if (!text.trim()) { toast('请先粘贴内容', true); return; }
+      try {
+        var r = await importText(text, '粘贴内容');
+        $('#pasteText').value = ''; $('#modal').classList.remove('show'); render();
+        toast('已添加 ' + r.added + ' 台，合并 ' + r.merged + ' 台');
+      } catch (e) { toast(e.message, true); }
+    });
+    $('#dedupeBtn').addEventListener('click', function () {
+      var before = state.servers.length;
+      state.servers = B.dedupe(state.servers); render();
+      toast('已去除 ' + (before - state.servers.length) + ' 条重复项');
+    });
+    $('#selectAll').addEventListener('click', function () {
+      var all = state.servers.every(function (s) { return s._selected !== false; });
+      state.servers.forEach(function (s) { s._selected = all ? false : true; }); render();
+    });
+    $('#expandAll').addEventListener('click', function () {
+      var anyClosed = state.servers.some(function (s) { return !s._open; });
+      state.servers.forEach(function (s) { s._open = anyClosed; }); render();
+    });
+    $('#secretBtn').addEventListener('click', function () {
+      state.showSecrets = !state.showSecrets;
+      $('#secretBtn').textContent = state.showSecrets ? '隐藏密码' : '显示密码';
+      render();
+    });
+    $('#clearBtn').addEventListener('click', function () {
+      if (!state.servers.length) return;
+      if (!confirm('确定清空当前列表？此操作只清空页面内存，不会删除你电脑上的任何文件。')) return;
+      state.servers = []; state.files = []; render(); toast('已清空');
+    });
+
+    $('#serverList').addEventListener('input', function (e) {
+      var el = e.target, i = +el.dataset.i;
+      if (isNaN(i) || !state.servers[i]) return;
+      if (el.dataset.li !== undefined) {
+        var l = state.servers[i].lines[+el.dataset.li];
+        if (l) l[el.dataset.lf] = el.value;
+      } else if (el.dataset.field) {
+        state.servers[i][el.dataset.field] = el.value;
+        if (el.dataset.field === 'name' || el.dataset.field === 'url') {
+          var card = el.closest('.server');
+          if (card) {
+            var n = card.querySelector('.sv-name'), u = card.querySelector('.sv-url');
+            if (n) n.textContent = state.servers[i].name || '未命名服务器';
+            if (u) u.textContent = state.servers[i].url || '';
+          }
+        }
+      }
+    });
+    $('#serverList').addEventListener('change', function (e) {
+      if (e.target.tagName === 'SELECT') e.target.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    $('#serverList').addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-act]'); if (!btn) return;
+      var act = btn.dataset.act, i = +btn.dataset.i;
+      if (act === 'toggle') { state.servers[i]._open = !state.servers[i]._open; render(); }
+      else if (act === 'sel') { state.servers[i]._selected = btn.checked; render(); }
+      else if (act === 'del') { state.servers.splice(i, 1); render(); }
+      else if (act === 'addline') { state.servers[i].lines.push({ name: '线路', url: '', active: false }); render(); }
+      else if (act === 'rmline') { state.servers[i].lines.splice(+btn.dataset.li, 1); render(); }
+    });
+
+    document.querySelectorAll('[data-export]').forEach(function (b) {
+      b.addEventListener('click', function () { exportAs(b.dataset.export); });
+    });
+
+    if (!globalThis.crypto || !globalThis.crypto.subtle) {
+      toast('当前环境缺少 Web Crypto，请改用 HTTPS 页面或新版浏览器打开', true);
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function () { bind(); render(); });
+})();
+</script>
+</body>
+</html>
