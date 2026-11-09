@@ -60,4 +60,33 @@ for (const dst of B.FORMATS.concat(['bridge'])) {
 const csv = B.toCsv(servers);
 assert.equal(B.parseCsv(csv).length, 2, 'csv round-trip');
 assert.equal(B.parseQuickText('名称 | https://x.example.com | u | p').length, 1, 'quick text');
-console.log(`OK: ${checked} formats round-tripped, 7x8 cross-format builds, CSV and quick text passed.`);
+// Regression: official Hills exports use a different CBC IV tail, so only the
+// first 16-byte plaintext block is garbled while every later block is intact.
+// The parser must rebuild the JSON head instead of throwing.
+{
+  const hillsKey = Buffer.from('9d2729bd3afe5536669610e25b3ef6b3a7fd1efe2a065187101b144951617bce', 'hex');
+  const altIv = Buffer.from('bc322377137f312c35f13c9f10ae8993', 'hex');
+  const inner = { data: [{
+    displyName: '虚构 Hills', serverName: '虚构 Hills', serverUrl: 'https://hills.example.com:8920',
+    username: 'demo', password: 'demo-pw',
+    authenticateJson: JSON.stringify({ User: { Id: 'uid-123', Name: 'demo' }, AccessToken: 'tok-456' }),
+    orderIndex: 0,
+    serverRoutingList: [{ id: 'r1', name: '反代', url: 'https://proxy.example.com' }]
+  }] };
+  const innerText = JSON.stringify(inner).replace(/\}$/, '');
+  const cipher = await B._internal.cbcEncrypt(hillsKey, altIv, new TextEncoder().encode(innerText));
+  const fake = JSON.stringify({
+    version: 2, data: Buffer.from(cipher).toString('base64'),
+    settings: null, mpvConf: null, iconPacks: null, customIcons: null
+  });
+  assert.equal(B.detect(fake, 'HillsBackup-test.json'), 'hills', 'detect official-style hills');
+  const got = (await B.parse(fake, 'hills')).servers;
+  assert.equal(got.length, 1, 'official-style hills server count');
+  assert.equal(norm(got[0].url), norm('https://hills.example.com:8920'), 'official hills url');
+  assert.equal(got[0].username, 'demo', 'official hills username');
+  assert.equal(got[0].password, 'demo-pw', 'official hills password');
+  assert.equal(got[0].accessToken, 'tok-456', 'official hills token');
+  assert.ok(got[0].lines.some(l => l.url === 'https://proxy.example.com'), 'official hills route');
+}
+
+console.log(`OK: ${checked} formats round-tripped, 7x8 cross-format builds, CSV / quick text / official-style Hills passed.`);

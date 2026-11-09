@@ -53,13 +53,16 @@
       ' data-i="' + i + '" data-field="' + key + '" value="' + esc(val) + '"' +
       (opts.placeholder ? ' placeholder="' + esc(opts.placeholder) + '"' : '') + '></label>';
   }
-  function lineRow(i, j, l) {
+  function lineRow(i, j, line) {
+    var l = line && typeof line === 'object' ? line : {};
     return '<div class="line-row">' +
       '<input class="nm" data-i="' + i + '" data-li="' + j + '" data-lf="name" value="' + esc(l.name) + '" placeholder="线路名">' +
       '<input data-i="' + i + '" data-li="' + j + '" data-lf="url" value="' + esc(l.url) + '" placeholder="https://...">' +
       '<button class="rm" data-act="rmline" data-i="' + i + '" data-li="' + j + '" title="删除线路">×</button></div>';
   }
-  function serverHtml(s, i) {
+  function serverHtml(server, i) {
+    var s = server && typeof server === 'object' ? server : B.emptyServer();
+    if (!Array.isArray(s.lines)) s.lines = [];
     var open = !!s._open, sel = s._selected !== false;
     var h = '<div class="server' + (open ? ' open' : '') + (sel ? ' selected' : '') + '" data-card="' + i + '">';
     h += '<div class="server-head">' +
@@ -95,6 +98,7 @@
   function render() {
     var q = state.filter.trim().toLowerCase();
     var list = state.servers.map(function (s, i) { return { s: s, i: i }; }).filter(function (x) {
+      if (!x.s || typeof x.s !== 'object') return false;
       if (!q) return true;
       return [x.s.name, x.s.url, x.s.username, x.s.serverName].join(' ').toLowerCase().indexOf(q) >= 0;
     });
@@ -122,7 +126,12 @@
       var quick = B.parseQuickText(text);
       if (quick.length) { servers = quick; fmt = '文本'; }
     }
-    if (fmt && B.FORMATS.indexOf(fmt) >= 0) servers = (await B.parse(text, fmt)).servers;
+    if (fmt && B.FORMATS.indexOf(fmt) >= 0) {
+      try { servers = (await B.parse(text, fmt)).servers; }
+      catch (e) {
+        throw new Error('解析 ' + (B.META[fmt] ? B.META[fmt].label : fmt) + ' 失败：' + (e && e.message ? e.message : e));
+      }
+    }
     if (!servers.length) throw new Error('无法识别：' + name + '（支持的格式见页面下方）');
     var r = mergeServers(servers);
     state.files.push({ name: name, format: fmt, count: servers.length });

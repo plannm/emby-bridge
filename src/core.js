@@ -135,7 +135,10 @@
       userId: o.userId || '',
       accessToken: o.accessToken || '',
       icon: o.icon || '',
-      lines: Array.isArray(o.lines) ? o.lines.map(function (l) { return { name: l.name || '', url: l.url || '', active: !!l.active }; }) : [],
+      lines: Array.isArray(o.lines) ? o.lines.map(function (l) {
+        l = l && typeof l === 'object' ? l : {};
+        return { name: l.name || '', url: l.url || '', active: !!l.active };
+      }) : [],
       activeLine: typeof o.activeLine === 'number' ? o.activeLine : 0,
       remark: o.remark || '',
       sortOrder: typeof o.sortOrder === 'number' ? o.sortOrder : 0,
@@ -192,7 +195,55 @@
     if (path && path !== '/') s += (path.charAt(0) === '/' ? '' : '/') + path;
     return s;
   }
-  function linesFromRaw(arr, map) { return (arr || []).map(map).filter(function (l) { return l && l.url; }); }
+  function linesFromRaw(arr, map) {
+    return (Array.isArray(arr) ? arr : []).map(function (x) {
+      return x && typeof x === 'object' ? map(x) : null;
+    }).filter(function (l) { return l && l.url; });
+  }
+
+  /*
+   * Hills CBC quirk: different exporters use a different IV tail (the first
+   * 8 bytes are shared). In AES-CBC only plaintext block 0 depends on the IV,
+   * so blocks 1..n still decrypt perfectly. When the head is garbled we
+   * rebuild the fixed JSON prefix and parse the intact remainder.
+   */
+  function parseHillsJson(buf) {
+    var whole = fromUtf8(buf);
+    var tries = [whole, whole + '}', whole.replace(/\s+$/, '') + '}'];
+    for (var i = 0; i < tries.length; i++) {
+      try { return JSON.parse(tries[i]); } catch (e) { /* next */ }
+    }
+    var prefixes = ['{"data":[{"displ', '{"data":[{"displa', '{"data":[{', '{"data":['];
+    var offsets = [16, 15, 17, 14, 18];
+    var best = null, bestScore = -1;
+    function score(obj) {
+      var first = (obj.data || obj.servers || [])[0];
+      if (!first || typeof first !== 'object') return 0;
+      var n = 0;
+      if ('displyName' in first || 'displayName' in first) n += 2;
+      if ('serverUrl' in first) n += 1;
+      if ('serverName' in first) n += 1;
+      return n;
+    }
+    for (var p = 0; p < prefixes.length; p++) {
+      for (var q = 0; q < offsets.length; q++) {
+        var tail = fromUtf8(buf.subarray(offsets[q]));
+        var candidate = prefixes[p] + tail;
+        var variants = [candidate, candidate + '}', candidate.replace(/\s+$/, '') + '}'];
+        for (var v = 0; v < variants.length; v++) {
+          try {
+            var obj = JSON.parse(variants[v]);
+            if (!obj || (!Array.isArray(obj.data) && !Array.isArray(obj.servers))) continue;
+            var sc = score(obj);
+            if (sc === 4) return obj;
+            if (sc > bestScore) { best = obj; bestScore = sc; }
+          } catch (e) { /* next */ }
+        }
+      }
+    }
+    if (best) return best;
+    throw new Error('Hills 备份内容无法解析（解密后的文档结构不符合预期）');
+  }
 
   /* -------------------------------- detect -------------------------------- */
 
@@ -301,16 +352,18 @@
         break;
 
       case 'hills':
-        var hplain = fromUtf8(await cbcDecrypt(HILLS_KEY, HILLS_IV, b64ToBytes(o.data)));
-        var hjson;
-        try { hjson = JSON.parse(hplain); } catch (e) { hjson = JSON.parse(hplain + '}'); }
-        (hjson.data || []).forEach(function (h, idx) {
+        var hjson = parseHillsJson(await cbcDecrypt(HILLS_KEY, HILLS_IV, b64ToBytes(o.data)));
+        (hjson.data || hjson.servers || []).forEach(function (h, idx) {
+          if (!h || typeof h !== 'object') return;
           var auth = {};
-          try { auth = JSON.parse(h.authenticateJson || '{}'); } catch (e) { /* ignore */ }
+          try { auth = JSON.parse(h.authenticateJson || '{}') || {}; } catch (e) { /* ignore */ }
+          if (!auth || typeof auth !== 'object') auth = {};
           servers.push(emptyServer({
-            name: h.displyName || h.serverName, serverName: h.serverName, url: h.serverUrl,
-            username: h.username, password: h.password, userId: (auth.User || {}).Id,
-            accessToken: auth.AccessToken, icon: h.iconUrl, remark: h.remark || '',
+            name: h.displyName || h.displayName || h.displaayName || h.serverName || '',
+            serverName: h.serverName || '', url: h.serverUrl || h.url || '',
+            username: h.username || '', password: h.password || '',
+            userId: (auth.User || {}).Id || '', accessToken: auth.AccessToken || '',
+            icon: h.iconUrl || '', remark: h.remark || '',
             type: h.isJellyfin ? 'jellyfin' : 'emby', sortOrder: h.orderIndex || idx,
             lines: linesFromRaw(h.serverRoutingList, function (x) { return { name: x.name, url: x.url }; })
           }));
@@ -487,6 +540,9 @@
   async function buildHills(servers) {
     var data = servers.map(function (s, i) {
       var o = baseRaw(s, 'hills');
+      // Official Hills exports spell this field differently; keep one canonical key.
+      delete o.displayName;
+      delete o.displaayName;
       var auth = { User: { Name: s.username || '', Id: s.userId || '', PrimaryImageTag: null }, AccessToken: s.accessToken || '' };
       Object.assign(o, {
         displyName: s.name || '', serverName: s.serverName || s.name || '', serverUrl: s.url || lineUrl(s),
@@ -511,7 +567,7 @@
     // both variants.
     var innerText = JSON.stringify({ data: data }).replace(/\}$/, '');
     var cipher = await cbcEncrypt(HILLS_KEY, HILLS_IV, utf8(innerText));
-    return { version: 2, data: bytesToB64(cipher), settings: null, iconPacks: null, customIcons: null };
+    return { version: 2, data: bytesToB64(cipher), settings: null, mpvConf: null, iconPacks: null, customIcons: null };
   }
 
   async function buildAiplayer(servers) {
