@@ -51,6 +51,15 @@ h1 { font-size: 24px; margin: 0; letter-spacing: -.4px; }
 }
 .badge.blue { background: rgba(124, 140, 255, .08); border-color: rgba(124, 140, 255, .28); color: #b7c1ff; }
 .badge.amber { background: rgba(251, 191, 36, .07); border-color: rgba(251, 191, 36, .25); color: #f5d78a; }
+.badge.danger { background: rgba(248, 113, 113, .1); border-color: rgba(248, 113, 113, .35); color: #ffb8b8; font-weight: 600; }
+.notice {
+  margin: 18px 0 0; padding: 15px 17px; border-radius: 12px;
+  background: rgba(248, 113, 113, .07); border: 1px solid rgba(248, 113, 113, .3);
+  border-left: 3px solid var(--danger); color: #f3c9c9; font-size: 13px; line-height: 1.75;
+}
+.notice b { color: #ffd7d7; }
+.notice ul { margin: 8px 0 0; padding-left: 20px; }
+.notice li { margin: 3px 0; }
 
 /* sections */
 section.panel {

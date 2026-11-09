@@ -349,6 +349,10 @@
           }));
           servers[servers.length - 1].raw.capyplayer = r;
         });
+        // Keep the whole decrypted document so a CapyPlayer -> CapyPlayer
+        // round-trip also preserves preferences, watch stats, badge packs and
+        // the database_version of the source app (v22 files differ a lot).
+        if (servers.length) servers[0].raw._capyBackup = { inner: cplain, envelope: o };
         break;
 
       case 'hills':
@@ -505,6 +509,10 @@
   }
 
   async function buildCapyplayer(servers) {
+    var backup = null;
+    servers.forEach(function (s) {
+      if (!backup && s.raw && s.raw._capyBackup) backup = s.raw._capyBackup;
+    });
     var rows = servers.map(function (s, i) {
       var o = baseRaw(s, 'capyplayer');
       var u = splitUrl(s.url || lineUrl(s));
@@ -527,14 +535,19 @@
       });
       return o;
     });
-    var inner = { tables: { media_server_resources: rows, media_item_settings: [], icon_packs: [], icon_items: [] }, preferences: {} };
+    var inner = backup ? JSON.parse(JSON.stringify(backup.inner)) :
+      { tables: { media_server_resources: [], media_item_settings: [], icon_packs: [], icon_items: [] }, preferences: {} };
+    inner.tables = inner.tables || {};
+    inner.tables.media_server_resources = rows;
     var iv = randomBytes(16);
     var key = await pbkdf2(CAPY_PASSWORD, CAPY_SALT, 10000, 32);
     var ct = await gcmEncrypt(key, iv, utf8(JSON.stringify(inner)));
-    return {
-      version: '1.0', created_at: nowMs(), app_version: '1.0.0.0', database_version: 5,
-      device_name: 'Emby Bridge', encrypted_data: bytesToB64(iv) + ':' + bytesToB64(ct)
+    var envelope = backup ? Object.assign({}, backup.envelope) : {
+      version: '1.0', app_version: '1.0.0.0', database_version: 5, device_name: 'Emby Bridge'
     };
+    envelope.created_at = nowMs();
+    envelope.encrypted_data = bytesToB64(iv) + ':' + bytesToB64(ct);
+    return envelope;
   }
 
   async function buildHills(servers) {
