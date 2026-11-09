@@ -46,19 +46,6 @@
 
 ---
 
-## 部署到域名 / GitHub Pages
-
-`index.html` 是**自包含单文件**，不需要构建、不需要服务器、不需要 API Key：
-
-1. 把本仓库推到 GitHub（**只推代码，别推真实备份**）。
-2. 仓库 Settings → Pages → Build and deployment → Source 选 `Deploy from a branch`，分支选 `main`、目录选 `/ (root)`。
-3. 几分钟后即可用 `https://<用户名>.github.io/<仓库名>/` 访问。
-4. 自定义域名：在 DNS 加 CNAME 指向 `<用户名>.github.io`，在 Pages 的 Custom domain 填域名并开启 HTTPS；仓库里放一个内容为域名的 `CNAME` 文件即可。
-
-也可以把 `index.html` 放到任意静态托管（Cloudflare Pages、Vercel、Nginx、对象存储静态网站）。建议 HTTPS —— Web Crypto 在 HTTPS、localhost 以及主流浏览器的 `file://` 下都可用。
-
----
-
 ## 本项目结构
 
 | 文件 | 说明 |

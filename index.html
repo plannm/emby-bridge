@@ -263,8 +263,8 @@ footer { color: var(--dim); font-size: 12px; text-align: center; padding: 30px 0
       <span class="badge danger">⚠ 实验性工具 · 不保证可用</span>
     </div>
     <div class="notice">
-      <b>⚠ 使用前请先读：这是实验性工具，不保证所有播放器 / 版本 / 来源的备份都通用。</b><br>
-      备份格式来自对有限样本的兼容实现，客户端升级或备份来源不同都可能解析失败；跨格式转换也可能丢失播放器特有的设置。<b>请务必保留原始备份</b>，导出后先在目标 App 里核对，确认可用再替换旧配置。
+      <b>⚠ 使用前请先读：这是实验性工具，不保证所有播放器通用。</b><br>
+      不同版本、不同来源的备份可能解析失败或丢失部分设置。<b>请保留原始备份</b>，导出后先在目标 App 里验证再用。
     </div>
   </header>
 
@@ -334,7 +334,7 @@ footer { color: var(--dim); font-size: 12px; text-align: center; padding: 30px 0
     </div>
     <details class="faq" open>
       <summary>⚠ 已知限制</summary>
-      <p>本工具<b>不保证所有播放器、所有版本、所有来源的备份都通用</b>。备份格式来自对有限样本的兼容实现，客户端更新或换一个导出来源就可能解析失败；跨格式转换主要迁移服务器地址、账号与线路，播放器特有的设置不保证保留。请保留原始备份，导出后先在目标 App 里验证，确认可用再替换旧配置。</p>
+      <p>本工具<b>不保证所有播放器通用</b>。不同版本、不同来源的备份可能解析失败或丢失部分设置。请保留原始备份，导出后先在目标 App 里验证再用。</p>
     </details>
     <details class="faq">
       <summary>它到底做什么？安全吗？</summary>
@@ -357,10 +357,6 @@ footer { color: var(--dim); font-size: 12px; text-align: center; padding: 30px 0
     <details class="faq">
       <summary>备份文件要怎么保管？</summary>
       <p>导出的备份里含账号、密码与令牌（或等价的可逆数据），请当密码文件保管，不要上传到公开仓库、网盘分享链接或陌生网页。</p>
-    </details>
-    <details class="faq">
-      <summary>部署到自己的域名 / GitHub Pages</summary>
-      <p><code>index.html</code> 是单文件，没有任何外部依赖：直接双击可用，或把仓库推到 GitHub 后在 Settings → Pages 选择主分支根目录即可；绑定自定义域名时加一条 CNAME 记录并在 Pages 里填写域名。建议开启 HTTPS（Web Crypto 在 HTTPS、localhost 和大多数浏览器的本地文件下可用）。页面不需要后端、不需要数据库、不需要 API Key。</p>
     </details>
     <div class="note warn" style="margin-top:16px">
       <b>免责声明：</b>本工具仅用于迁移你本人有权使用的播放器配置。请不要用它处理他人的凭据，也不要把含密码的备份文件提交到公开仓库或发送给第三方。本工具与各播放器官方均无关联。
