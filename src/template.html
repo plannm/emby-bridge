@@ -10,7 +10,7 @@
 <style>/*__STYLE__*/</style>
 </head>
 <body>
-<div class="wrap">
+<div class="wrap" id="workspace">
 
   <header class="top">
     <div class="brand">
@@ -40,16 +40,24 @@
   <section class="panel">
     <div class="panel-head">
       <span class="step">1</span>
-      <div><h2 class="panel-title">导入备份</h2><p class="panel-desc">拖入或选择播放器导出的配置文件，可一次选多个。同地址 + 同账号会自动合并，不会重复。</p></div>
+      <div><h2 class="panel-title">导入备份</h2><p class="panel-desc">可一次选择多个文件。仅在身份明确且凭据无冲突时保守合并；冲突或歧义项目会分别保留。</p></div>
     </div>
-    <div class="drop" id="drop">
+    <div class="drop" id="drop" role="button" tabindex="0" aria-label="选择或拖入本地备份文件" aria-describedby="dropHelp importLimit" aria-disabled="false" aria-busy="false">
       <span class="icon" aria-hidden="true">⇩</span>
       <div class="big">把备份文件拖到这里</div>
-      <div class="small">支持 .json / .lpbak / .wwpcfg / .csv，也能直接粘贴地址清单</div>
-      <button class="btn primary" id="pickBtn">选择文件</button>
-      <input type="file" id="fileInput" multiple accept=".json,.lpbak,.wwpcfg,.csv,.txt,application/json,text/plain">
+      <div class="small" id="dropHelp">支持 .json / .lpbak / .wwpcfg / .csv / .txt，也能直接粘贴地址清单</div>
+      <div class="small" id="importLimit">每个文件或粘贴内容最多 20 MiB；页面最多容纳 5,000 台服务器</div>
+      <button class="btn primary" id="pickBtn" data-mutation>选择文件</button>
+      <input type="file" id="fileInput" multiple accept=".json,.lpbak,.wwpcfg,.csv,.txt,application/json,text/plain" aria-label="选择本地备份文件">
     </div>
-    <div class="filelist" id="fileList"></div>
+    <div class="import-progress" id="importPanel" hidden>
+      <div class="progress-head">
+        <span id="importStatus" role="status" aria-live="polite" aria-atomic="true">等待导入</span>
+        <button class="btn sm ghost" id="importCancel" hidden>取消导入</button>
+      </div>
+      <progress id="importProgress" max="1" value="0" aria-label="导入进度"></progress>
+    </div>
+    <ul class="filelist" id="fileList" aria-label="逐项导入结果"></ul>
     <div class="note gray" style="margin-top:14px">
       文件只在当前页面内存中解析，<b>不会上传、不会缓存、不会写入 localStorage</b>；刷新页面即全部清空。页面本身也没有任何外部脚本、字体或统计代码。
     </div>
@@ -58,35 +66,42 @@
   <section class="panel">
     <div class="panel-head">
       <span class="step">2</span>
-      <div><h2 class="panel-title">检查与编辑服务器</h2><p class="panel-desc">点「编辑」展开详细字段；用勾选框决定哪些服务器参与导出。</p></div>
+      <div><h2 class="panel-title">检查与编辑服务器</h2><p class="panel-desc">每页最多 50 台，只有展开的卡片加载编辑字段。勾选决定导出范围，「展开本页」不影响其他页。含换行字段只读预览，原值保留，可通过 CSV / JSON 修改。</p></div>
       <div class="spacer"></div>
-      <span class="count" id="count">共 0 台</span>
+      <span class="count" id="count" role="status" aria-live="polite" aria-atomic="true">共 0 台 · 已选 0 台</span>
     </div>
     <div class="toolbar">
-      <button class="btn" id="addBtn">+ 添加一台</button>
-      <button class="btn" id="pasteBtn">批量粘贴 / CSV</button>
-      <button class="btn" id="dedupeBtn">去重</button>
-      <button class="btn" id="selectAll">全选 / 反选</button>
-      <button class="btn" id="expandAll">展开 / 收起</button>
-      <button class="btn" id="secretBtn">显示密码</button>
+      <button class="btn" id="addBtn" data-mutation>+ 添加一台</button>
+      <button class="btn" id="pasteBtn" data-mutation>批量粘贴 / CSV</button>
+      <button class="btn" id="dedupeBtn" data-mutation>保守去重</button>
+      <button class="btn" id="selectAll" data-mutation>全部选择 / 反选</button>
+      <button class="btn" id="expandAll" data-mutation>展开本页</button>
+      <button class="btn" id="secretBtn" data-mutation aria-pressed="false" title="显示或隐藏密码、User ID 与 Access Token">显示凭据</button>
       <div class="spacer"></div>
-      <input class="search" id="search" type="search" placeholder="搜索名称 / 地址 / 账号">
+      <input class="search" id="search" type="search" placeholder="搜索名称 / 地址 / 账号" aria-label="搜索服务器名称、地址或账号">
       <button class="btn ghost danger" id="clearBtn">清空</button>
     </div>
-    <div id="serverList"></div>
+    <div id="serverList" role="region" aria-label="服务器列表" aria-busy="false"></div>
+    <nav class="pager" id="pager" aria-label="服务器分页" hidden>
+      <span id="pageInfo" class="count" role="status" aria-live="polite" aria-atomic="true"></span>
+      <div class="pager-actions">
+        <button class="btn sm" id="prevPage">上一页</button>
+        <button class="btn sm" id="nextPage">下一页</button>
+      </div>
+    </nav>
   </section>
 
   <section class="panel">
     <div class="panel-head">
       <span class="step">3</span>
-      <div><h2 class="panel-title">导出为目标格式</h2><p class="panel-desc">点一下即在本地生成文件并下载，文件名与各播放器习惯保持一致。</p></div>
+      <div><h2 class="panel-title">导出为目标格式</h2><p class="panel-desc">选择目标后先预检、确认警告，再在本地生成下载。默认仅导出服务器，完整备份仅用于同格式往返。</p></div>
     </div>
     <div class="fmt-grid">
       <button class="fmt" data-export="hills"><div class="t">Hills <span class="ext">.json</span></div><div class="d">macOS / iOS 常用播放器，加密配置</div></button>
       <button class="fmt" data-export="yamby"><div class="t">Yamby / Tsukimi <span class="ext">.json</span></div><div class="d">通用 CommonConfig 加密格式</div></button>
       <button class="fmt" data-export="linplayer"><div class="t">LinPlayer <span class="ext">.lpbak</span></div><div class="d">密钥随文件附带，兼容性好</div></button>
       <button class="fmt" data-export="wwplayer"><div class="t">WWPlayer 电脑端 <span class="ext">.wwpcfg</span></div><div class="d">V1 便携配置，供电脑客户端导入</div></button>
-      <button class="fmt" data-export="wwmobile"><div class="t">WWPlayer 手机端 <span class="ext">.json</span></div><div class="d">完整备份格式</div><div class="w">⚠ 不含密码，导入后每个服务器需重新登录一次</div></button>
+      <button class="fmt" data-export="wwmobile"><div class="t">WWPlayer 手机端 <span class="ext">.json</span></div><div class="d">schemaVersion 2 便携备份</div><div class="w">Android 0.4.9 不支持密码 / Token 迁移；导入后需重新认证</div></button>
       <button class="fmt" data-export="capyplayer"><div class="t">CapyPlayer <span class="ext">.json</span></div><div class="d">加密数据库备份格式</div></button>
       <button class="fmt" data-export="aiplayer"><div class="t">AI Player <span class="ext">.json</span></div><div class="d">V1 加密服务器配置</div></button>
       <button class="fmt" data-export="afusekt"><div class="t">AfuseKt <span class="ext">.json</span></div><div class="d">明文配置</div><div class="w">⚠ 该格式不保存 User ID / Token</div></button>
@@ -120,8 +135,8 @@
     <details class="faq">
       <summary>批量添加支持哪些写法？</summary>
       <p>点「批量粘贴 / CSV」，支持三种：<br>
-         · <b>CSV</b>：表头为 <code>name,type,url,username,password,userId,accessToken,icon,lines</code>（可只写其中几列），线路列用 <code>名称=地址|名称=地址</code> 表示；<br>
-         · <b>每行一台</b>：<code>名称 | https://地址 | 用户名 | 密码</code>，分隔符也可用逗号、分号或制表符；只写 URL 也可以；<br>
+         · <b>CSV</b>：表头为 <code>name,type,url,username,password,userId,accessToken,icon,lines,serverName,remark,activeLine</code>（可只写其中几列）。线路列使用 JSON 数组，保留名称、地址和活动标记；旧 <code>名称=地址|名称=地址</code> 仍可读取，但分隔符有歧义时会报错。含逗号、双引号或换行的字段请按 CSV 规则引用；<br>
+         · <b>每行一台</b>：<code>名称 | https://地址 | 用户名 | 密码</code>，分隔符也可用逗号、分号或制表符；只写 URL 也可以。包含分隔符的字段请用双引号包住，字段内的双引号写作 <code>&quot;&quot;</code>；引号或列数有误会报告失败，不会静默丢弃；<br>
          · <b>通用中间格式 JSON</b>：本工具自己导出的文件。</p>
     </details>
     <details class="faq">
@@ -136,20 +151,49 @@
   <footer>Emby Bridge · 本地优先，零外联 · 所有格式编解码均在浏览器内完成</footer>
 </div>
 
-<div class="modal-mask" id="modal">
-  <div class="modal">
-    <h3>批量添加服务器</h3>
-    <p>粘贴 CSV、每行一台的地址清单，或本工具导出的通用中间格式 JSON。相同地址 + 账号会自动合并。</p>
-    <textarea id="pasteText" spellcheck="false" placeholder="示例：
+<div class="modal-mask" id="modal" hidden aria-hidden="true">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="pasteTitle" aria-describedby="pasteDesc" tabindex="-1">
+    <h3 id="pasteTitle">批量添加服务器</h3>
+    <p id="pasteDesc">粘贴 CSV、地址清单或播放器备份 JSON，最多 20 MiB。仅在身份明确且凭据无冲突时合并。失败或取消不会清除你粘贴的内容。</p>
+    <label class="sr-only" for="pasteText">待导入内容</label>
+    <textarea id="pasteText" spellcheck="false" autocomplete="off" aria-describedby="pasteDesc pasteError" placeholder="示例：
 我的服务器 | https://emby.example.com:8096 | admin | password
 备用服务器 | https://emby2.example.com | admin | password"></textarea>
+    <div class="modal-status" id="pasteStatus" role="status" aria-live="polite" aria-atomic="true"></div>
+    <div class="error-message" id="pasteError" role="alert" aria-atomic="true"></div>
     <div class="modal-actions">
       <button class="btn" id="modalCancel">取消</button>
       <button class="btn primary" id="modalOk">添加到列表</button>
     </div>
   </div>
 </div>
-<div id="toast" role="status" aria-live="polite"></div>
+<div class="modal-mask" id="exportModal" hidden aria-hidden="true">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="exportTitle" aria-describedby="exportIntro" tabindex="-1">
+    <h3 id="exportTitle">导出预检</h3>
+    <p id="exportIntro">检查选中数量、导出模式与数据差异。只在本地生成文件，不会访问或登录服务器。</p>
+    <p class="count" id="exportSelection" role="status" aria-live="polite" aria-atomic="true">已选 0 / 共 0 台</p>
+    <fieldset class="export-modes">
+      <legend>导出模式</legend>
+      <label class="mode-option"><input type="radio" name="exportMode" id="exportModeServers" value="servers" checked><span><b>仅选中的服务器</b><small>默认模式，不附带原文档的设置和历史</small></span></label>
+      <label class="mode-option"><input type="radio" name="exportMode" id="exportModeFull" value="full" aria-describedby="fullModeHint"><span><b>完整备份 · 同格式往返</b><small>保留一份原始文档，要求全部服务器、单一来源</small></span></label>
+      <p class="line-help" id="fullModeHint"></p>
+    </fieldset>
+    <div class="export-summary">
+      <b id="exportModeSummary">导出模式：仅选中的服务器</b>
+      <span id="exportSource"></span>
+    </div>
+    <div class="note warn" id="exportRisk"></div>
+    <div class="export-check" id="exportErrors" tabindex="-1" aria-live="polite" aria-atomic="true"></div>
+    <div class="export-check warnings" id="exportWarnings"></div>
+    <label class="warning-confirm" id="exportConfirmWrap" hidden><input type="checkbox" id="exportConfirm"><span>我已阅读以上警告，并接受所述兼容性与数据差异</span></label>
+    <div class="modal-status" id="exportStatus" role="status" aria-live="polite" aria-atomic="true"></div>
+    <div class="modal-actions">
+      <button class="btn" id="exportCancel">取消</button>
+      <button class="btn primary" id="exportOk">生成并下载</button>
+    </div>
+  </div>
+</div>
+<div id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
 <script>/*__CORE__*/</script>
 <script>/*__APP__*/</script>
