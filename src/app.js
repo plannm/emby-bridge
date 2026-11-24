@@ -6,8 +6,10 @@
   var state = {
     servers: [], files: [], contexts: [], filter: '', showSecrets: false,
     page: 1, pageSize: 50, generation: 0, importJob: null,
-    exportBusy: false, exportJob: null, exportModel: null, dialog: null
+    exportBusy: false, exportJob: null, exportModel: null, dialog: null, effectsPaused: false
   };
+  var motionQuery = globalThis.matchMedia ? globalThis.matchMedia('(prefers-reduced-motion: reduce)') : { matches: false };
+  var cardMotions = new Map();
   var fullFormats = ['yamby', 'linplayer', 'wwplayer', 'wwmobile', 'capyplayer', 'aiplayer', 'hills'];
 
   function esc(s) {
@@ -78,12 +80,31 @@
         '<button class="rm" data-act="rmline"' + attrs + ' aria-label="删除 ' + esc(label) + '">删除</button>') +
       (hasLineBreak(line.name) || hasLineBreak(line.url) ? '<small class="raw-field-hint line-raw-hint">含换行的字段只读，原值仍保留；请通过 CSV / JSON 修改。</small>' : '') + '</div>';
   }
-  function serverHtml(s, index, animateId) {
-    var open = !!s._open, sel = s._selected !== false;
-    var bodyId = 'server-body-' + (index + 1);
+  function serverBodyId(s) {
+    // A collision-free DOM identity, independent of filtering, deletion and pagination.
+    return 'server-body-' + Array.from(String(s.id), function (c) { return c.codePointAt(0).toString(16); }).join('-');
+  }
+  function serverBodyHtml(s) {
     var attrs = ' data-sid="' + esc(s.id) + '"';
-    var h = '<div class="server' + (open ? ' open' : '') + (sel ? ' selected' : '') +
-      (s.id === animateId ? ' animate-open' : '') + '" data-card="' + esc(s.id) + '">';
+    return '<div class="server-body-inner"><div class="fields">' + field(s, 'name', '显示名称', s.name) +
+      '<label class="f"><span>服务器类型</span><select' + attrs + ' data-field="type">' +
+      '<option value="emby"' + (s.type === 'emby' ? ' selected' : '') + '>Emby</option>' +
+      '<option value="jellyfin"' + (s.type === 'jellyfin' ? ' selected' : '') + '>Jellyfin</option></select></label>' +
+      field(s, 'url', '主地址（与主线路同步）', s.url, { mono: true, placeholder: 'https://server:8096' }) +
+      field(s, 'serverName', '服务器名（部分播放器用）', s.serverName) +
+      field(s, 'username', '用户名', s.username) + field(s, 'password', '密码', s.password, { secret: true }) +
+      field(s, 'userId', 'User ID', s.userId, { secret: true, mono: true }) +
+      field(s, 'accessToken', 'Access Token', s.accessToken, { secret: true, mono: true }) +
+      field(s, 'icon', '图标 URL', s.icon, { mono: true }) + field(s, 'remark', '备注', s.remark) + '</div>' +
+      '<fieldset class="lines"><legend>线路 / 备用地址</legend><div class="lines-title">' +
+      '<span class="line-help">单选框指定活动线路；主线路不能删除。</span>' +
+      '<button class="btn sm ghost" data-act="addline"' + attrs + '>+ 添加线路</button></div>' +
+      s.lines.map(function (l) { return lineRow(s, l); }).join('') + '</fieldset></div>';
+  }
+  function serverHtml(s, index) {
+    var open = !!s._open, sel = s._selected !== false;
+    var bodyId = serverBodyId(s), attrs = ' data-sid="' + esc(s.id) + '"';
+    var h = '<div class="server' + (open ? ' open' : '') + (sel ? ' selected' : '') + '" data-card="' + esc(s.id) + '">';
     h += '<div class="server-head"><input type="checkbox" data-act="sel"' + attrs +
       (sel ? ' checked' : '') + ' aria-label="导出 ' + esc(s.name || '未命名服务器') + '">' +
       '<span class="idx">' + (index + 1) + '</span><div class="meta">' +
@@ -93,24 +114,68 @@
       '<button class="btn sm ghost" data-act="toggle"' + attrs + ' aria-expanded="' + open +
       '" aria-controls="' + bodyId + '">' + (open ? '收起' : '编辑') + '</button>' +
       '<button class="btn sm ghost danger" data-act="del"' + attrs + ' aria-label="删除 ' + esc(s.name || '未命名服务器') + '">删除</button></div>';
-    h += '<div class="server-body" id="' + bodyId + '"' + (open ? '' : ' hidden') + '>';
-    if (open) {
-      h += '<div class="fields">' + field(s, 'name', '显示名称', s.name) +
-        '<label class="f"><span>服务器类型</span><select' + attrs + ' data-field="type">' +
-        '<option value="emby"' + (s.type === 'emby' ? ' selected' : '') + '>Emby</option>' +
-        '<option value="jellyfin"' + (s.type === 'jellyfin' ? ' selected' : '') + '>Jellyfin</option></select></label>' +
-        field(s, 'url', '主地址（与主线路同步）', s.url, { mono: true, placeholder: 'https://server:8096' }) +
-        field(s, 'serverName', '服务器名（部分播放器用）', s.serverName) +
-        field(s, 'username', '用户名', s.username) + field(s, 'password', '密码', s.password, { secret: true }) +
-        field(s, 'userId', 'User ID', s.userId, { secret: true, mono: true }) +
-        field(s, 'accessToken', 'Access Token', s.accessToken, { secret: true, mono: true }) +
-        field(s, 'icon', '图标 URL', s.icon, { mono: true }) + field(s, 'remark', '备注', s.remark) + '</div>' +
-        '<fieldset class="lines"><legend>线路 / 备用地址</legend><div class="lines-title">' +
-        '<span class="line-help">单选框指定活动线路；主线路不能删除。</span>' +
-        '<button class="btn sm ghost" data-act="addline"' + attrs + '>+ 添加线路</button></div>' +
-        s.lines.map(function (l) { return lineRow(s, l); }).join('') + '</fieldset>';
+    return h + '<div class="server-body" id="' + bodyId + '"' + (open ? '' : ' hidden') + '>' +
+      (open ? serverBodyHtml(s) : '') + '</div></div>';
+  }
+
+  function stopCardMotion(card) {
+    var motion = cardMotions.get(card);
+    if (!motion) return;
+    cardMotions.delete(card);
+    motion.animation.cancel();
+    motion.body.style.overflow = '';
+  }
+  function stopCardMotions() { Array.from(cardMotions.keys()).forEach(stopCardMotion); }
+  function cardInViewport(card) {
+    var rect = card.getBoundingClientRect();
+    return rect.bottom > 0 && rect.top < globalThis.innerHeight + 80;
+  }
+  function moveCardBody(card, open, fromHeight, fromOpacity) {
+    var body = card.querySelector('.server-body');
+    stopCardMotion(card);
+    body.hidden = false;
+    body.inert = !open;
+    function settle() {
+      body.hidden = !open;
+      body.inert = false;
+      body.style.overflow = '';
+      if (!open) body.textContent = '';
     }
-    return h + '</div></div>';
+    if (motionQuery.matches || !body.animate || !cardInViewport(card)) { settle(); return; }
+    var targetHeight = open ? body.firstElementChild.getBoundingClientRect().height : 0;
+    body.style.overflow = 'hidden';
+    var animation = body.animate([
+      { height: fromHeight + 'px', opacity: fromOpacity },
+      { height: targetHeight + 'px', opacity: open ? 1 : 0 }
+    ], { duration: open ? 320 : 240, easing: 'cubic-bezier(.22, 1, .36, 1)', fill: 'both' });
+    var motion = { animation: animation, body: body, finish: function () {
+      if (cardMotions.get(card) !== motion) return;
+      cardMotions.delete(card);
+      var s = serverById(card.dataset.card);
+      if (card.isConnected && s && !!s._open === open) settle();
+      animation.cancel();
+    } };
+    cardMotions.set(card, motion);
+    animation.finished.then(motion.finish, function () {});
+  }
+  function updateExpandLabel() {
+    var items = view().items;
+    $('#expandAll').textContent = items.length && items.every(function (x) { return x.s._open; }) ? '收起本页' : '展开本页';
+  }
+  function setServerOpen(s, open) {
+    var card = cardById(s.id);
+    if (!!s._open === open) return;
+    s._open = open;
+    if (!card) return;
+    var body = card.querySelector('.server-body'), button = card.querySelector('[data-act="toggle"]');
+    var fromHeight = body.hidden ? 0 : body.getBoundingClientRect().height;
+    var fromOpacity = body.hidden ? 0 : Number(getComputedStyle(body).opacity);
+    if (!open && body.contains(document.activeElement)) button.focus({ preventScroll: true });
+    if (open && !body.firstElementChild) body.innerHTML = serverBodyHtml(s);
+    card.classList.toggle('open', open);
+    button.textContent = open ? '收起' : '编辑';
+    button.setAttribute('aria-expanded', String(open));
+    moveCardBody(card, open, fromHeight, fromOpacity);
   }
   function view() {
     var q = state.filter.trim().toLowerCase();
@@ -154,18 +219,24 @@
   function render(options) {
     options = options || {};
     var focus = options.focus || captureCardFocus(), v = view();
+    stopCardMotions();
     $('#serverList').innerHTML = v.items.length ? v.items.map(function (x) {
-      return serverHtml(x.s, x.index, options.animateId);
-    }).join('') : '<div class="empty">' + (state.servers.length ? '没有匹配的服务器。搜索不会取消已勾选的项目。' :
-      '还没有服务器。先导入播放器备份，或用「批量粘贴」添加地址。') + '</div>';
+      return serverHtml(x.s, x.index);
+    }).join('') : '<div class="empty"><span class="empty-icon" aria-hidden="true"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="14" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 17.5h.01M11 7.5h6M11 17.5h6"/></svg></span><b>' +
+      (state.servers.length ? '没有匹配的服务器' : '你的配置工作区已就绪') + '</b><span>' +
+      (state.servers.length ? '搜索不会取消已勾选的项目。' : '先导入播放器备份，或用「批量粘贴」添加地址。') + '</span></div>';
     $('#pager').hidden = !v.list.length;
     $('#pageInfo').textContent = '第 ' + state.page + ' / ' + v.pages + ' 页 · 显示 ' + (v.start + 1) + '–' +
       (v.start + v.items.length) + ' / ' + v.list.length + ' 条' + (state.filter.trim() ? '匹配结果' : '服务器');
     $('#prevPage').disabled = state.page <= 1;
     $('#nextPage').disabled = state.page >= v.pages;
-    $('#expandAll').textContent = v.items.length && v.items.every(function (x) { return x.s._open; }) ? '收起本页' : '展开本页';
+    updateExpandLabel();
     fmtCount();
     syncBusyUI();
+    if (options.animateId) {
+      var card = cardById(options.animateId);
+      if (card && card.classList.contains('open')) moveCardBody(card, true, 0, 0);
+    }
     restoreCardFocus(focus);
   }
   function renderFiles() {
@@ -200,6 +271,9 @@
       $('#exportModeServers').disabled = locked;
       $('#exportModeFull').disabled = locked || fullFormats.indexOf(state.exportModel.format) < 0;
       $('#exportConfirm').disabled = locked;
+    }
+    if (state.dialog && state.dialog.closing) {
+      state.dialog.mask.querySelectorAll('button, input, select, textarea').forEach(function (el) { el.disabled = true; });
     }
   }
   function updateCardMeta(s, card) {
@@ -347,7 +421,7 @@
     finishImport(job);
   }
   async function handlePaste() {
-    if (!canMutate()) return;
+    if (!canMutate() || !state.dialog || state.dialog.closing) return;
     var text = $('#pasteText').value;
     if (!text.trim()) { $('#pasteError').textContent = '请先粘贴内容'; $('#pasteText').focus(); return; }
     $('#pasteError').textContent = ''; $('#pasteText').removeAttribute('aria-invalid');
@@ -375,21 +449,50 @@
   /* 对话框统一管理焦点、Escape、键盘循环以及关闭后的焦点恢复。 */
   function focusable(mask) {
     return Array.from(mask.querySelectorAll('button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')).filter(function (el) {
-      return !el.hidden && !el.closest('[hidden]') && el.getClientRects().length > 0;
+      return !el.hidden && !el.closest('[hidden], [inert]') && el.getClientRects().length > 0;
     });
   }
+  function finalizeDialog(dialog) {
+    // Only the current lifecycle can hide a sheet or release the workspace.
+    if (state.dialog !== dialog) return;
+    state.dialog = null;
+    clearTimeout(dialog.closeTimer);
+    (dialog.animations || []).forEach(function (animation) { animation.cancel(); });
+    (dialog.disabledControls || []).forEach(function (x) { x.el.disabled = x.disabled; });
+    dialog.mask.classList.remove('show', 'leaving');
+    dialog.mask.hidden = true;
+    $('#workspace').inert = false;
+    $('#workspace').removeAttribute('aria-hidden');
+    document.body.classList.remove('dialog-open');
+    syncBusyUI();
+    var target = dialog.returnFocus;
+    if (!target || !target.isConnected || target.disabled) target = $('#search');
+    target.focus({ preventScroll: true });
+    dialog.mask.setAttribute('aria-hidden', 'true');
+  }
+  function prepareDialogOpen() {
+    if (state.dialog && state.dialog.closing) finalizeDialog(state.dialog);
+    return !state.dialog;
+  }
   function openDialog(mask, focusTarget) {
-    if (state.dialog) return;
-    state.dialog = { mask: mask, returnFocus: document.activeElement };
+    if (!prepareDialogOpen()) return;
+    state.dialog = { mask: mask, returnFocus: document.activeElement, closing: false, animations: [] };
+    mask.classList.remove('leaving');
     mask.hidden = false; mask.setAttribute('aria-hidden', 'false'); mask.classList.add('show');
     document.body.classList.add('dialog-open');
-    (focusTarget || focusable(mask)[0] || mask.querySelector('.modal')).focus();
+    syncBusyUI();
+    (focusTarget || focusable(mask)[0] || mask.querySelector('.modal')).focus({ preventScroll: true });
     $('#workspace').inert = true;
     $('#workspace').setAttribute('aria-hidden', 'true');
   }
   function closeDialog(reason) {
-    if (!state.dialog) return;
+    if (!state.dialog || state.dialog.closing) return;
     var dialog = state.dialog;
+    dialog.disabledControls = Array.from(dialog.mask.querySelectorAll('button, input, select, textarea')).map(function (el) {
+      return { el: el, disabled: el.disabled };
+    });
+    // Cancellation is immediate, never delayed until the visual exit finishes.
+    dialog.closing = true;
     if (reason !== 'complete' && dialog.mask.id === 'modal' && state.importJob && state.importJob.kind === 'paste') cancelImport();
     if (dialog.mask.id === 'exportModal') {
       if (reason !== 'complete' && state.exportJob) {
@@ -398,19 +501,66 @@
       }
       state.exportModel = null;
     }
-    dialog.mask.classList.remove('show'); dialog.mask.hidden = true;
-    dialog.mask.setAttribute('aria-hidden', 'true'); state.dialog = null;
-    $('#workspace').inert = false; $('#workspace').removeAttribute('aria-hidden');
-    document.body.classList.remove('dialog-open');
-    syncBusyUI();
-    var target = dialog.returnFocus;
-    if (!target || !target.isConnected || target.disabled) target = $('#search');
-    target.focus({ preventScroll: true });
     if (state.exportBusy) {
       $('#importPanel').hidden = false;
       $('#importStatus').textContent = '下载已取消，正在结束本地生成操作。';
       $('#importProgress').removeAttribute('value');
     }
+    var sheet = dialog.mask.querySelector('.modal');
+    var maskStyle = getComputedStyle(dialog.mask), sheetStyle = getComputedStyle(sheet);
+    var maskOpacity = maskStyle.opacity, sheetOpacity = sheetStyle.opacity, sheetTransform = sheetStyle.transform;
+    sheet.focus({ preventScroll: true });
+    dialog.disabledControls.forEach(function (x) { x.el.disabled = true; });
+    dialog.mask.classList.add('leaving');
+    syncBusyUI();
+    if (motionQuery.matches || !dialog.mask.animate || !sheet.animate) { finalizeDialog(dialog); return; }
+    dialog.animations = [
+      dialog.mask.animate([{ opacity: maskOpacity }, { opacity: 0 }], { duration: 220, easing: 'ease-out', fill: 'both' }),
+      sheet.animate([{ opacity: sheetOpacity, transform: sheetTransform }, { opacity: 0, transform: 'translateY(16px) scale(.975)' }],
+        { duration: 220, easing: 'cubic-bezier(.4, 0, 1, 1)', fill: 'both' })
+    ];
+    dialog.closeTimer = setTimeout(function () { finalizeDialog(dialog); }, 360);
+    Promise.all(dialog.animations.map(function (animation) { return animation.finished; })).then(function () {
+      finalizeDialog(dialog);
+    }, function () { if (state.dialog === dialog && dialog.closing) finalizeDialog(dialog); });
+  }
+
+  /* Decorative effects are optional, memory-only and suspended outside the viewport. */
+  function syncEffectsUI() {
+    var reduced = motionQuery.matches, paused = reduced || state.effectsPaused;
+    document.body.classList.toggle('effects-paused', paused);
+    document.body.classList.toggle('page-hidden', document.hidden);
+    var button = $('#motionBtn');
+    button.disabled = reduced;
+    button.setAttribute('aria-pressed', String(paused));
+    button.setAttribute('aria-label', reduced ? '系统已启用减少动画，流光动效已关闭' : (paused ? '恢复背景与边框的流光动效' : '暂停背景与边框的流光动效'));
+    button.title = reduced ? '遵循系统的减少动画设置' : '只控制装饰流光，不影响导入、编辑或导出；刷新后恢复默认';
+    $('#motionLabel').textContent = reduced ? '已减少动效' : (paused ? '恢复流光' : '暂停流光');
+    $('#motionIcon').innerHTML = paused ? '<path d="m7 4 8 6-8 6Z"/>' : '<path d="M7 4v12M13 4v12"/>';
+  }
+  function bindEffects() {
+    $('#motionBtn').addEventListener('click', function () {
+      if (motionQuery.matches) return;
+      state.effectsPaused = !state.effectsPaused;
+      syncEffectsUI();
+    });
+    document.addEventListener('visibilitychange', syncEffectsUI);
+    function changed() {
+      if (motionQuery.matches) {
+        Array.from(cardMotions.values()).forEach(function (motion) { motion.finish(); });
+        if (state.dialog && state.dialog.closing) finalizeDialog(state.dialog);
+      }
+      syncEffectsUI();
+    }
+    if (motionQuery.addEventListener) motionQuery.addEventListener('change', changed);
+    else if (motionQuery.addListener) motionQuery.addListener(changed);
+    if (globalThis.IntersectionObserver) {
+      var observer = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) { entry.target.classList.toggle('fx-sleep', !entry.isIntersecting); });
+      }, { rootMargin: '120px' });
+      document.querySelectorAll('[data-glow]').forEach(function (el) { observer.observe(el); });
+    }
+    syncEffectsUI();
   }
 
   /* 导出范围只取勾选状态，完整模式必须能够唯一匹配同格式原始文档。 */
@@ -469,7 +619,7 @@
     syncBusyUI();
   }
   function openExport(fmt) {
-    if (!canMutate()) return;
+    if (!canMutate() || !prepareDialogOpen()) return;
     state.exportModel = { format: fmt, mode: 'servers', report: null, warningKey: '' };
     $('#exportTitle').textContent = '导出为 ' + formatLabel(fmt);
     $('#exportModeServers').checked = true; $('#exportModeFull').checked = false;
@@ -565,7 +715,7 @@
       render({ focus: { sid: s.id, field: 'name' }, animateId: s.id });
     });
     $('#pasteBtn').addEventListener('click', function () {
-      if (!canMutate()) return;
+      if (!canMutate() || !prepareDialogOpen()) return;
       $('#pasteStatus').textContent = '';
       openDialog($('#modal'), $('#pasteText'));
     });
@@ -590,7 +740,8 @@
     $('#expandAll').addEventListener('click', function () {
       if (!canMutate()) return;
       var items = view().items, anyClosed = items.some(function (x) { return !x.s._open; });
-      items.forEach(function (x) { x.s._open = anyClosed; }); render();
+      items.forEach(function (x) { setServerOpen(x.s, anyClosed); });
+      updateExpandLabel();
     });
     $('#secretBtn').addEventListener('click', function () {
       if (!canMutate()) return;
@@ -658,7 +809,7 @@
       var s = serverById(btn.dataset.sid);
       if (!s) return;
       var act = btn.dataset.act;
-      if (act === 'toggle') { s._open = !s._open; render({ animateId: s._open ? s.id : null }); }
+      if (act === 'toggle') { setServerOpen(s, !s._open); updateExpandLabel(); }
       else if (act === 'del') { state.servers = state.servers.filter(function (x) { return x.id !== s.id; }); render(); }
       else if (act === 'addline') {
         try {
@@ -704,5 +855,5 @@
     });
     if (!globalThis.crypto || !globalThis.crypto.subtle) toast('当前环境缺少 Web Crypto，请改用本地 HTTP 预览或新版浏览器', true);
   }
-  document.addEventListener('DOMContentLoaded', function () { bind(); renderFiles(); render(); });
+  document.addEventListener('DOMContentLoaded', function () { bindEffects(); bind(); renderFiles(); render(); });
 })();

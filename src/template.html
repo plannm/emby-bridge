@@ -10,45 +10,91 @@
 <style>/*__STYLE__*/</style>
 </head>
 <body>
+<div class="ambient" aria-hidden="true"><div class="aurora aurora-one"></div><div class="aurora aurora-two"></div><div class="aurora aurora-three"></div></div>
 <div class="wrap" id="workspace">
 
   <header class="top">
-    <div class="brand">
-      <div class="logo" aria-hidden="true">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0e1020" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M4 7h11a3 3 0 0 1 0 6H9a3 3 0 0 0 0 6h11"/><circle cx="4" cy="7" r="1.6" fill="#0e1020"/><circle cx="20" cy="19" r="1.6" fill="#0e1020"/>
-        </svg>
-      </div>
-      <div>
-        <h1>Emby Bridge · 播放器配置互转</h1>
-        <div class="sub">把各播放器的服务器配置备份，变成 Mac / 手机 / 网页都能处理的文件</div>
+    <div class="masthead">
+      <a class="brand" href="#" aria-label="Emby Bridge 首页">
+        <span class="logo" aria-hidden="true">
+          <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="#bce7ff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h11a3 3 0 0 1 0 6H9a3 3 0 0 0 0 6h11"/><circle cx="4" cy="7" r="1.5" fill="#bce7ff"/><circle cx="20" cy="19" r="1.5" fill="#bce7ff"/></svg>
+        </span>
+        <span><span class="brand-name">Emby Bridge</span><span class="brand-caption">PLAYER CONFIG WORKSPACE</span></span>
+      </a>
+      <div class="top-actions">
+        <a class="top-link" href="#guide">使用与安全说明</a>
+        <button class="btn sm ghost motion-toggle" id="motionBtn" type="button" aria-pressed="false" aria-label="暂停背景与边框的流光动效">
+          <svg id="motionIcon" width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M7 4v12M13 4v12"/></svg><span id="motionLabel">暂停流光</span>
+        </button>
       </div>
     </div>
-    <div class="badges">
-      <span class="badge">✓ 纯浏览器本地运行</span>
-      <span class="badge blue">✓ 零网络请求（已禁用联网）</span>
-      <span class="badge">✓ 不会连接或登录任何 Emby 服务器</span>
-      <span class="badge amber">⚠ 备份含明文密码，请自行保管</span>
-      <span class="badge danger">⚠ 实验性工具 · 不保证可用</span>
+    <div class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow"><span class="status-dot" aria-hidden="true"></span>LOCAL FIRST. PRIVACY ALWAYS.</p>
+        <h1>让配置流动，<br><span class="hero-gradient">让数据留在本地。</span></h1>
+        <p class="hero-desc">一份备份，连接不同播放器。<br>在浏览器里导入、整理、转换你的 Emby / Jellyfin 配置，全程不连接服务器。</p>
+        <div class="badges">
+          <span class="badge"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="2"/><path d="M5 7V5a3 3 0 0 1 6 0v2"/></svg>本地解析</span>
+          <span class="badge"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M2 2l12 12M3 10a7 7 0 0 1 3-2M1 6a11 11 0 0 1 10-1M6 12a3 3 0 0 1 4 0"/></svg>零外联 · 已禁用联网</span>
+          <span class="badge">不连接或登录服务器</span>
+        </div>
+        <div class="hero-actions">
+          <a class="btn primary" href="#importSection">开始转换<svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 10h12M11 5l5 5-5 5"/></svg></a>
+          <a class="hero-secondary" href="#guide">了解格式与安全边界</a>
+        </div>
+      </div>
+      <div class="hero-visual">
+        <div class="hero-console" data-glow role="img" aria-label="示意：JSON、LPBAK、CSV 备份经过浏览器本地转换，输出 Hills、LinPlayer、WWPlayer 等播放器格式；不会连接服务器。">
+          <span class="edge-flow" aria-hidden="true"></span>
+          <div class="console-head"><span><span class="status-dot"></span>LOCAL CONVERSION</span><span class="console-state">OFFLINE</span></div>
+          <div class="source-files"><span class="file-pill">.json</span><span class="file-pill">.lpbak</span><span class="file-pill">.csv</span></div>
+          <svg class="bridge-diagram" viewBox="0 0 320 73" fill="none" aria-hidden="true">
+            <defs><linearGradient id="flowGradient" x1="0" y1="0" x2="320" y2="73" gradientUnits="userSpaceOnUse"><stop stop-color="#8ce8f4"/><stop offset="1" stop-color="#b7a0ff"/></linearGradient></defs>
+            <path class="flow-base" d="M65 0v19q0 13 13 13h69q13 0 13 13v28M160 0v73M255 0v19q0 13-13 13h-69q-13 0-13 13v28"/>
+            <path class="flow-signal" d="M65 0v19q0 13 13 13h69q13 0 13 13v28M160 0v73M255 0v19q0 13-13 13h-69q-13 0-13 13v28"/>
+          </svg>
+          <div class="bridge-core"><span class="hub-ring" aria-hidden="true"></span><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#c6eaff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h11a3 3 0 0 1 0 6H9a3 3 0 0 0 0 6h11"/><circle cx="4" cy="7" r="1.5"/><circle cx="20" cy="19" r="1.5"/></svg></div>
+          <div class="target-files"><span>Hills</span><span>LinPlayer</span><span>WWPlayer</span><span>更多格式</span></div>
+          <div class="console-foot">只转换备份，不连接服务器</div>
+        </div>
+        <div class="hero-stats"><div><strong>08</strong><span>原生播放器格式</span></div><div><strong>20 MiB</strong><span>单项导入上限</span></div><div><strong>本地</strong><span>解析与文件生成</span></div></div>
+      </div>
     </div>
     <div class="notice">
-      <b>⚠ 使用前请先读：这是实验性工具，不保证所有播放器通用。</b><br>
-      不同版本、不同来源的备份可能解析失败或丢失部分设置。<b>请保留原始备份</b>，导出后先在目标 App 里验证再用。
+      <svg class="notice-icon" width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M9 3a1.2 1.2 0 0 1 2 0l7 12a1.2 1.2 0 0 1-1 2H3a1.2 1.2 0 0 1-1-2Z"/><path d="M10 7v4m0 2v1"/></svg>
+      <div><b>实验性工具，请保留原始备份。</b><p>不同版本的兼容性可能有差异，导出后请先在目标 App 里验证。备份可能含明文密码、Token 或等价凭据，请自行妥善保管，不要公开分享。</p></div>
     </div>
   </header>
 
-  <section class="panel">
+  <nav class="workflow" aria-label="配置转换步骤">
+    <a href="#importSection"><span class="workflow-num">01</span><span><b>导入备份</b><small>从一份本地文件开始</small></span><svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M4 10h12m-5-5 5 5-5 5"/></svg></a>
+    <a href="#serverSection"><span class="workflow-num">02</span><span><b>检查与编辑</b><small>整理账号与线路</small></span><svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M4 10h12m-5-5 5 5-5 5"/></svg></a>
+    <a href="#exportSection"><span class="workflow-num">03</span><span><b>转换并导出</b><small>选择目标播放器</small></span><svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M4 10h12m-5-5 5 5-5 5"/></svg></a>
+  </nav>
+
+  <section class="panel panel--import" id="importSection" data-glow aria-labelledby="importTitle">
+    <span class="edge-flow" aria-hidden="true"></span>
     <div class="panel-head">
-      <span class="step">1</span>
-      <div><h2 class="panel-title">导入备份</h2><p class="panel-desc">可一次选择多个文件。仅在身份明确且凭据无冲突时保守合并；冲突或歧义项目会分别保留。</p></div>
+      <span class="step">01</span>
+      <div><h2 class="panel-title" id="importTitle">导入备份</h2><p class="panel-desc">一次导入多个文件。身份明确且凭据无冲突时保守合并；冲突或歧义项目分别保留。</p></div>
     </div>
-    <div class="drop" id="drop" role="button" tabindex="0" aria-label="选择或拖入本地备份文件" aria-describedby="dropHelp importLimit" aria-disabled="false" aria-busy="false">
-      <span class="icon" aria-hidden="true">⇩</span>
-      <div class="big">把备份文件拖到这里</div>
-      <div class="small" id="dropHelp">支持 .json / .lpbak / .wwpcfg / .csv / .txt，也能直接粘贴地址清单</div>
-      <div class="small" id="importLimit">每个文件或粘贴内容最多 20 MiB；页面最多容纳 5,000 台服务器</div>
-      <button class="btn primary" id="pickBtn" data-mutation>选择文件</button>
-      <input type="file" id="fileInput" multiple accept=".json,.lpbak,.wwpcfg,.csv,.txt,application/json,text/plain" aria-label="选择本地备份文件">
+    <div class="import-grid">
+      <div class="drop" id="drop" role="button" tabindex="0" aria-label="选择或拖入本地备份文件" aria-describedby="dropHelp importLimit" aria-disabled="false" aria-busy="false">
+        <span class="icon" aria-hidden="true"><svg width="27" height="29" viewBox="0 0 24 26" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v18a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Zm0 0v6h6M12 12v7m-3-3 3 3 3-3"/></svg></span>
+        <div class="big">把备份文件拖到这里</div>
+        <div class="small" id="dropHelp">支持 .json / .lpbak / .wwpcfg / .csv / .txt<br>也可以在下一步直接粘贴地址清单</div>
+        <button class="btn primary" id="pickBtn" data-mutation>选择本地文件<svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 10h12m-5-5 5 5-5 5"/></svg></button>
+        <input type="file" id="fileInput" multiple accept=".json,.lpbak,.wwpcfg,.csv,.txt,application/json,text/plain" aria-label="选择本地备份文件">
+      </div>
+      <div class="import-side">
+        <span class="side-kicker">YOUR FILES. YOUR CONTROL.</span><h3>从一份备份开始</h3>
+        <ol class="import-instructions">
+          <li><span class="instruction-num" aria-hidden="true">1</span><div><b>从原播放器导出</b><p>保留原文件，只迁移你有权使用的配置。</p></div></li>
+          <li><span class="instruction-num" aria-hidden="true">2</span><div><b>在这里检查与整理</b><p>核对账号、主地址与活动线路。</p></div></li>
+          <li><span class="instruction-num" aria-hidden="true">3</span><div><b>转换为目标格式</b><p>通过预检后，在本地生成下载。</p></div></li>
+        </ol>
+        <p class="limit" id="importLimit">单项文件或粘贴内容最多 20 MiB<br>页面最多 5,000 台服务器</p>
+      </div>
     </div>
     <div class="import-progress" id="importPanel" hidden>
       <div class="progress-head">
@@ -63,10 +109,10 @@
     </div>
   </section>
 
-  <section class="panel">
+  <section class="panel panel--servers" id="serverSection" aria-labelledby="serverTitle">
     <div class="panel-head">
-      <span class="step">2</span>
-      <div><h2 class="panel-title">检查与编辑服务器</h2><p class="panel-desc">每页最多 50 台，只有展开的卡片加载编辑字段。勾选决定导出范围，「展开本页」不影响其他页。含换行字段只读预览，原值保留，可通过 CSV / JSON 修改。</p></div>
+      <span class="step">02</span>
+      <div><h2 class="panel-title" id="serverTitle">检查与编辑服务器</h2><p class="panel-desc">每页最多 50 台，只有展开的卡片加载编辑字段。勾选决定导出范围，「展开本页」不影响其他页。含换行字段只读预览，原值保留，可通过 CSV / JSON 修改。</p></div>
       <div class="spacer"></div>
       <span class="count" id="count" role="status" aria-live="polite" aria-atomic="true">共 0 台 · 已选 0 台</span>
     </div>
@@ -91,31 +137,32 @@
     </nav>
   </section>
 
-  <section class="panel">
+  <section class="panel panel--export" id="exportSection" data-glow aria-labelledby="exportPanelTitle">
+    <span class="edge-flow" aria-hidden="true"></span>
     <div class="panel-head">
-      <span class="step">3</span>
-      <div><h2 class="panel-title">导出为目标格式</h2><p class="panel-desc">选择目标后先预检、确认警告，再在本地生成下载。默认仅导出服务器，完整备份仅用于同格式往返。</p></div>
+      <span class="step">03</span>
+      <div><h2 class="panel-title" id="exportPanelTitle">导出为目标格式</h2><p class="panel-desc">选择目标后先预检、确认警告，再在本地生成下载。默认仅导出服务器，完整备份仅用于同格式往返。</p></div>
     </div>
     <div class="fmt-grid">
-      <button class="fmt" data-export="hills"><div class="t">Hills <span class="ext">.json</span></div><div class="d">macOS / iOS 常用播放器，加密配置</div></button>
-      <button class="fmt" data-export="yamby"><div class="t">Yamby / Tsukimi <span class="ext">.json</span></div><div class="d">通用 CommonConfig 加密格式</div></button>
-      <button class="fmt" data-export="linplayer"><div class="t">LinPlayer <span class="ext">.lpbak</span></div><div class="d">密钥随文件附带，兼容性好</div></button>
-      <button class="fmt" data-export="wwplayer"><div class="t">WWPlayer 电脑端 <span class="ext">.wwpcfg</span></div><div class="d">V1 便携配置，供电脑客户端导入</div></button>
-      <button class="fmt" data-export="wwmobile"><div class="t">WWPlayer 手机端 <span class="ext">.json</span></div><div class="d">schemaVersion 2 便携备份</div><div class="w">Android 0.4.9 不支持密码 / Token 迁移；导入后需重新认证</div></button>
-      <button class="fmt" data-export="capyplayer"><div class="t">CapyPlayer <span class="ext">.json</span></div><div class="d">加密数据库备份格式</div></button>
-      <button class="fmt" data-export="aiplayer"><div class="t">AI Player <span class="ext">.json</span></div><div class="d">V1 加密服务器配置</div></button>
-      <button class="fmt" data-export="afusekt"><div class="t">AfuseKt <span class="ext">.json</span></div><div class="d">明文配置</div><div class="w">⚠ 该格式不保存 User ID / Token</div></button>
-      <button class="fmt" data-export="bridge"><div class="t">通用中间格式 <span class="ext">.json</span></div><div class="d">明文、可手工编辑，适合长期保存与跨设备迁移</div></button>
-      <button class="fmt" data-export="csv"><div class="t">CSV 表格 <span class="ext">.csv</span></div><div class="d">用 Excel / 表格软件批量整理</div></button>
+      <button class="fmt" data-export="hills" style="--format-color:#afd4ff"><span class="fmt-top" aria-hidden="true"><span class="fmt-mark">H</span><svg class="fmt-arrow" width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M5 15 15 5M5 5h10v10"/></svg></span><span class="t">Hills <span class="ext">.json</span></span><span class="d">macOS / iOS 常用播放器，加密配置</span></button>
+      <button class="fmt" data-export="yamby" style="--format-color:#c5b3fa"><span class="fmt-top" aria-hidden="true"><span class="fmt-mark">Y</span><svg class="fmt-arrow" width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M5 15 15 5M5 5h10v10"/></svg></span><span class="t">Yamby / Tsukimi <span class="ext">.json</span></span><span class="d">通用 CommonConfig 加密格式</span></button>
+      <button class="fmt" data-export="linplayer" style="--format-color:#a1e8d5"><span class="fmt-top" aria-hidden="true"><span class="fmt-mark">L</span><svg class="fmt-arrow" width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M5 15 15 5M5 5h10v10"/></svg></span><span class="t">LinPlayer <span class="ext">.lpbak</span></span><span class="d">密钥随文件附带，兼容性好</span></button>
+      <button class="fmt" data-export="wwplayer" style="--format-color:#c3baff"><span class="fmt-top" aria-hidden="true"><span class="fmt-mark">W</span><svg class="fmt-arrow" width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M5 15 15 5M5 5h10v10"/></svg></span><span class="t">WWPlayer 电脑端 <span class="ext">.wwpcfg</span></span><span class="d">V1 便携配置，供电脑客户端导入</span></button>
+      <button class="fmt" data-export="wwmobile" style="--format-color:#e6bbdc"><span class="fmt-top" aria-hidden="true"><span class="fmt-mark">WM</span><svg class="fmt-arrow" width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M5 15 15 5M5 5h10v10"/></svg></span><span class="t">WWPlayer 手机端 <span class="ext">.json</span></span><span class="d">schemaVersion 2 便携备份</span><span class="w">Android 0.4.9 不支持密码 / Token 迁移；导入后需重新认证</span></button>
+      <button class="fmt" data-export="capyplayer" style="--format-color:#f1c9a0"><span class="fmt-top" aria-hidden="true"><span class="fmt-mark">C</span><svg class="fmt-arrow" width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M5 15 15 5M5 5h10v10"/></svg></span><span class="t">CapyPlayer <span class="ext">.json</span></span><span class="d">加密数据库备份格式</span></button>
+      <button class="fmt" data-export="aiplayer" style="--format-color:#9ae5ed"><span class="fmt-top" aria-hidden="true"><span class="fmt-mark">AI</span><svg class="fmt-arrow" width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M5 15 15 5M5 5h10v10"/></svg></span><span class="t">AI Player <span class="ext">.json</span></span><span class="d">V1 加密服务器配置</span></button>
+      <button class="fmt" data-export="afusekt" style="--format-color:#b9d2f6"><span class="fmt-top" aria-hidden="true"><span class="fmt-mark">A</span><svg class="fmt-arrow" width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M5 15 15 5M5 5h10v10"/></svg></span><span class="t">AfuseKt <span class="ext">.json</span></span><span class="d">明文配置</span><span class="w">该格式不保存 User ID / Token</span></button>
+      <button class="fmt" data-export="bridge" style="--format-color:#a8e2ce"><span class="fmt-top" aria-hidden="true"><span class="fmt-mark">&lt;/&gt;</span><svg class="fmt-arrow" width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M5 15 15 5M5 5h10v10"/></svg></span><span class="t">通用中间格式 <span class="ext">.json</span></span><span class="d">明文、可手工编辑，适合长期保存与跨设备迁移</span></button>
+      <button class="fmt" data-export="csv" style="--format-color:#c8dc9e"><span class="fmt-top" aria-hidden="true"><span class="fmt-mark">CSV</span><svg class="fmt-arrow" width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M5 15 15 5M5 5h10v10"/></svg></span><span class="t">CSV 表格 <span class="ext">.csv</span></span><span class="d">用 Excel / 表格软件批量整理</span></button>
     </div>
     <div class="note" id="exportHint" style="margin-top:16px">将导出已勾选的 0 台服务器。</div>
     <div class="note warn" style="margin-top:10px">导出的文件请先在目标播放器里验证能导入、能连上，再考虑替换旧配置；<b>不要覆盖或删除原始备份</b>。</div>
   </section>
 
-  <section class="panel">
+  <section class="panel panel--guide" id="guide" aria-labelledby="guideTitle">
     <div class="panel-head">
-      <span class="step">?</span>
-      <div><h2 class="panel-title">使用说明与注意事项</h2></div>
+      <span class="step" aria-hidden="true">i</span>
+      <div><h2 class="panel-title" id="guideTitle">使用说明与注意事项</h2><p class="panel-desc">迁移之前，先了解格式限制与凭据安全。</p></div>
     </div>
     <details class="faq" open>
       <summary>⚠ 已知限制</summary>
@@ -148,11 +195,12 @@
     </div>
   </section>
 
-  <footer>Emby Bridge · 本地优先，零外联 · 所有格式编解码均在浏览器内完成</footer>
+  <footer><span>Emby Bridge · 本地优先，零外联 · 所有格式编解码均在浏览器内完成</span><span class="footer-edition">GLASS EDITION / LOCAL FIRST</span></footer>
 </div>
 
 <div class="modal-mask" id="modal" hidden aria-hidden="true">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="pasteTitle" aria-describedby="pasteDesc" tabindex="-1">
+    <div class="modal-kicker" aria-hidden="true"><span class="status-dot"></span>LOCAL IMPORT</div>
     <h3 id="pasteTitle">批量添加服务器</h3>
     <p id="pasteDesc">粘贴 CSV、地址清单或播放器备份 JSON，最多 20 MiB。仅在身份明确且凭据无冲突时合并。失败或取消不会清除你粘贴的内容。</p>
     <label class="sr-only" for="pasteText">待导入内容</label>
@@ -169,6 +217,7 @@
 </div>
 <div class="modal-mask" id="exportModal" hidden aria-hidden="true">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="exportTitle" aria-describedby="exportIntro" tabindex="-1">
+    <div class="modal-kicker" aria-hidden="true"><span class="status-dot"></span>EXPORT PREFLIGHT</div>
     <h3 id="exportTitle">导出预检</h3>
     <p id="exportIntro">检查选中数量、导出模式与数据差异。只在本地生成文件，不会访问或登录服务器。</p>
     <p class="count" id="exportSelection" role="status" aria-live="polite" aria-atomic="true">已选 0 / 共 0 台</p>
