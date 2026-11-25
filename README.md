@@ -71,6 +71,23 @@
 
 ---
 
+## 播放器 Logo 来源
+
+卡片介绍使用宽泛的配置 / 备份说明，不据此承诺平台或版本兼容；具体格式契约及凭据损失仍以预检和 `docs/FORMATS.md` 为准。Logo 保存在 `src/logos/`，构建时内嵌为 `data:` 图片，不增加运行时外链请求，也不改变离线 CSP。
+
+| 文件 | 公开来源 |
+| --- | --- |
+| `hills.svg` | [Hills 官网品牌图标](https://www.hills.im/brands/hills-logo.svg) |
+| `yamby.png` | [Yamby 官方 Google Play 应用图标](https://play.google.com/store/apps/details?id=com.hush.yamby) |
+| `tsukimi.png` | [Tsukimi 官方 Flathub 分发图标](https://flathub.org/apps/moe.tsuna.tsukimi)，项目为 [tsukinaha/tsukimi](https://github.com/tsukinaha/tsukimi) |
+| `linplayer.png` | [LinPlayer 官方仓库的桌面应用图标](https://github.com/zzzwannasleep/LinPlayer/blob/78af5215aaa7b9e3f81014b090d8d55cbabf11c0/apps/windows/LinPlayer.Desktop/Assets/icon.png) |
+| `wwplayer.svg` | [WWPlayer 官网品牌图标](https://wwplayer.com/assets/wwplayer-mark.svg)，电脑端 / 手机端卡片共用品牌标识 |
+| `capyplayer.webp` | [CapyPlayer 官网 Logo](https://capyplayer.feifeiduck.com/logo.webp) |
+| `aiplayer.svg` | 用户确认的 [AI Player 官网](https://aiplayer.arkhamimp.qzz.io/) 导航品牌 SVG，仅补充独立 SVG 文件所需的命名空间 |
+| `afusekt.png` | [AfuseKt 官方 Google Play 应用图标](https://play.google.com/store/apps/details?id=com.attempt.afusekt) |
+
+核对日期：2026-11-25。图标仅用于识别对应第三方软件，版权及商标归各自权利人，本工具不代表官方或获得官方背书。Yamby / Tsukimi 共用格式卡片显示两个 Logo；JSON / CSV 非播放器格式继续使用格式字标。
+
 ## 本项目结构
 
 | 文件 | 说明 |
@@ -80,7 +97,8 @@
 | `src/app.js` | 页面交互 |
 | `src/style.css` | 深色响应式样式 |
 | `src/template.html` | 页面骨架 |
-| `build.mjs` | 把 src 内联成 `index.html` |
+| `src/logos/` | 公开来源的播放器 Logo，构建时内嵌 |
+| `build.mjs` | 把 src 与 Logo 内联成 `index.html` |
 | `tests/selftest.mjs` | 用虚构数据跑全格式往返测试 |
 | `docs/FORMATS.md` | 各备份格式的技术说明 |
 

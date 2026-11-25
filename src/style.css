@@ -263,8 +263,11 @@ label.f input.mono { font-family: var(--mono); font-size: 11px; }
 .fmt::after { content: ""; position: absolute; z-index: -1; inset: 0; background: linear-gradient(105deg, transparent 25%, rgba(171, 218, 255, .09) 48%, transparent 70%); transform: translateX(-110%); pointer-events: none; }
 .fmt:not(:disabled):hover, .fmt:not(:disabled):focus-visible { border-color: var(--format-color); background: linear-gradient(125deg, rgba(142, 195, 237, .08), rgba(146, 121, 228, .05)), rgba(17, 31, 52, .7); transform: translateY(-4px); box-shadow: 0 12px 24px rgba(0, 0, 0, .17); }
 .fmt:not(:disabled):hover::after { animation: tile-sheen .85s var(--ease) both; }
-.fmt-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.fmt-top { display: flex; align-items: center; justify-content: space-between; min-height: 40px; margin-bottom: 14px; }
 .fmt-mark { display: grid; place-items: center; min-width: 32px; height: 32px; padding: 0 6px; border: 1px solid var(--line); border-radius: 10px; background: rgba(165, 190, 237, .055); color: var(--format-color); font-size: 11px; font-weight: 650; font-family: var(--mono); }
+.fmt-logos { display: flex; align-items: center; gap: 9px; }
+.fmt-logo { display: grid; place-items: center; flex: 0 0 auto; width: 40px; height: 40px; }
+.fmt-logo img { display: block; width: 40px; height: 40px; object-fit: contain; }
 .fmt-arrow { color: var(--dim); transition: color .2s, transform .3s var(--ease); }
 .fmt:not(:disabled):hover .fmt-arrow { color: var(--format-color); transform: translate(2px, -2px); }
 .fmt .t { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; color: #e0ebfa; font-size: 12.5px; font-weight: 600; }
